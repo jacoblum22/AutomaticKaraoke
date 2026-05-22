@@ -4,8 +4,26 @@ Run from the **repository root**:
 
 ```bash
 # Phase 4 Step 1 — whisper deps + vocal fixture
-python scripts/smoke_phase4_step1.py
 pip install -r backend/requirements-whisper.txt
+python scripts/smoke_phase4_step1.py
+python scripts/smoke_phase4_step2.py
+
+# Phase 4 Step 3 — transcribe + align → lyrics.json (~3 min CPU on 30s clip)
+python scripts/test_whisper_local.py --clip-end 30
+python scripts/validate_lyrics_json.py scripts/output/lyrics.json
+python scripts/smoke_phase4_step3.py
+
+# Phase 4 Step 6–7 — Modal GPU Whisper (bakes psychosomatic/vocals.wav at deploy)
+cd backend
+..\.venv\Scripts\modal.exe run app.py::smoke_whisper_fixture
+..\.venv\Scripts\modal.exe deploy app.py
+cd ..
+python scripts/smoke_whisper_modal.py
+python scripts/smoke_whisper_modal.py --deploy
+
+# Phase 4 Step 5 — full-song lyrics.json (Modal GPU)
+python scripts/smoke_phase4_step5.py
+python scripts/smoke_phase4_step5.py --local
 
 # Phase 3 Step 1 — fixture + demucs/torch in venv
 python scripts/generate_sample_fixture.py

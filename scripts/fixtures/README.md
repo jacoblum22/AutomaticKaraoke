@@ -23,6 +23,7 @@ Phase 3+ scripts expect audio files here. **Do not commit copyrighted commercial
 pip install -r backend/requirements-whisper.txt
 .\.venv\Scripts\python.exe scripts\smoke_phase4_step1.py
 .\.venv\Scripts\python.exe scripts\smoke_phase4_step2.py
+.\.venv\Scripts\python.exe scripts\smoke_phase4_step3.py
 ```
 
 **Phase 4:** `vocals_30s.wav` from the tone-only `sample_30s` fixture has no lyrics for Whisper. Use vocals from a real song (e.g. `scripts/output/psychosomatic/vocals.wav`) or overwrite `vocals_30s.wav` with a 30s clip from real Demucs output.

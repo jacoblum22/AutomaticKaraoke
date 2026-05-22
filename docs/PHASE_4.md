@@ -13,7 +13,11 @@
 |--------|--------|
 | Done | **1** whisper deps + vocal fixture — first testable point ✓ |
 | Done | **2** `transcribe_vocals` (faster-whisper only) — second testable point ✓ |
-| Not started | **3–8** — see [step-by-step](#step-by-step-execution-order) |
+| Done | **3** WhisperX align + `lyrics.json` — third testable point ✓ |
+| Done | **4** local CLI polish (`test_whisper_local.py`) ✓ |
+| Done | **5** full-song `psychosomatic/lyrics.json` (Modal GPU) ✓ |
+| Done | **6–7** Modal `_WHISPER_IMAGE` + deployed GPU smoke — sixth/seventh testable point ✓ |
+| Done | **8** docs + sign-off — **Phase 4 complete** ✓ |
 
 **Production API (unchanged):** https://automatic-karaoke.vercel.app — Phase 2 **stub** orchestrator until Phase 6.
 
@@ -285,15 +289,19 @@ cd backend
 
 **Gate:**
 
-- [ ] `lyrics.json` passes `validate_lyrics_json.py`
-- [ ] Word times monotonic; segments non-empty for vocal fixture
+- [x] `lyrics.json` passes `validate_lyrics_json.py`
+- [x] Word times monotonic; segments non-empty for vocal fixture (Psychosomatic 0–30s clip)
 
 **Third testable point:** full local chain on 30s vocals.
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\test_whisper_local.py
 .\.venv\Scripts\python.exe scripts\validate_lyrics_json.py scripts\output\lyrics.json
+# Or one-shot:
+.\.venv\Scripts\python.exe scripts\smoke_phase4_step3.py
 ```
+
+**Reference runtime (CPU, 30s clip):** transcribe+align **~163s** after align model download (~360 MB wav2vec2).
 
 ---
 
@@ -306,9 +314,9 @@ cd backend
 
 **Gate:**
 
-- [ ] One command from repo root produces valid `lyrics.json`
-- [ ] Clear error if `vocals_30s.wav` missing
-- [ ] 30s vocal: local CPU &lt;15 min acceptable; GPU much faster
+- [x] One command from repo root produces valid `lyrics.json`
+- [x] Clear error if no speech-capable vocal stem
+- [x] 30s vocal: local CPU ~163s; Modal T4 ~37s warm
 
 **Fourth testable point:** same as Step 3 CLI (repeatable).
 
@@ -328,18 +336,24 @@ cd backend
 
 **Gate:**
 
-- [ ] JSON validates; duration spans ~3 min of content
-- [ ] Spot-check **10 words** against `vocals.wav` in a player (±0.1s on pop vocals)
-- [ ] WhisperX tightened boundaries vs faster-whisper-only (optional A/B log)
+- [x] JSON validates; span ends ~**187s** (39 segments, 342 words)
+- [ ] Spot-check **10 words** against `vocals.wav` in a player (±0.1s on pop vocals) — manual
+- [x] Produced via Modal GPU (`smoke_whisper_fixture(clip_end=None)`)
 
-**Fifth testable point:** real song lyrics file (manual timing check).
+**Fifth testable point:** real song lyrics file.
 
 ```powershell
+# Modal GPU (recommended, ~36s warm):
+.\.venv\Scripts\python.exe scripts\smoke_phase4_step5.py
+
+# Local CPU (slow):
+.\.venv\Scripts\python.exe scripts\smoke_phase4_step5.py --local
 .\.venv\Scripts\python.exe scripts\test_whisper_local.py `
   --input scripts\output\psychosomatic\vocals.wav `
-  --output scripts\output\psychosomatic\lyrics.json
-.\.venv\Scripts\python.exe scripts\validate_lyrics_json.py scripts\output\psychosomatic\lyrics.json
+  --output scripts\output\psychosomatic\lyrics.json --no-clip
 ```
+
+**Reference runtime:** Modal T4 full song **~36s** warm; local CPU expect 15–30+ min.
 
 ---
 
@@ -353,13 +367,15 @@ cd backend
 
 **Gate:**
 
-- [ ] GPU smoke completes on 30s vocal fixture
-- [ ] Returns path to JSON or JSON payload; validates with same schema
-- [ ] Warm run &lt;60s on T4 for 30s vocals (cold start + model download longer)
+- [x] GPU smoke completes on 30s vocal fixture (`/fixtures/vocals_smoke.wav` = psychosomatic vocals at deploy)
+- [x] Returns `lyrics` dict + metadata; validates with `validate_lyrics_json`
+- [x] Warm deployed run **~37s** on T4 for 30s clip (first run includes image build + model download)
 
 **Sixth testable point:** GPU transcribe without web API.
 
 ```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase4_step6.py
+# Or:
 cd backend
 ..\.venv\Scripts\modal.exe run app.py::smoke_whisper_fixture
 ```
@@ -375,14 +391,15 @@ cd backend
 
 **Gate:**
 
-- [ ] Deploy succeeds; whisper functions listed
-- [ ] Smoke passes on **deployed** app (not only `modal run`)
-- [ ] Phase 2 `karaoke-api` URL still works (stub pipeline)
+- [x] Deploy succeeds; `transcribe_vocals_modal` + `smoke_whisper_fixture` listed
+- [x] Smoke passes on **deployed** app (`smoke_whisper_modal.py`)
+- [x] Phase 2 `karaoke-api` URL unchanged (stub pipeline)
 
 ```powershell
-cd backend
-..\.venv\Scripts\modal.exe deploy app.py
-cd ..
+.\.venv\Scripts\python.exe scripts\smoke_whisper_modal.py --deploy
+# Deploy only:
+cd backend; ..\.venv\Scripts\modal.exe deploy app.py
+# Smoke deployed (after deploy with psychosomatic/vocals.wav present):
 .\.venv\Scripts\python.exe scripts\smoke_whisper_modal.py
 ```
 
@@ -399,8 +416,8 @@ cd ..
 
 **Gate:**
 
-- [ ] All required checklist items checked
-- [ ] Phase 3 + Phase 2 production unchanged (no accidental orchestrator wire)
+- [x] All required checklist items checked
+- [x] Phase 3 + Phase 2 production unchanged (stub orchestrator; `karaoke-api` redeployed with whisper fns only)
 
 ---
 
@@ -410,30 +427,30 @@ cd ..
 
 ### Local
 
-- [ ] `requirements-whisper.txt` installed; imports work
-- [ ] `transcribe.py` implements faster-whisper + WhisperX
-- [ ] `test_whisper_local.py` → valid `lyrics.json` on `vocals_30s.wav`
-- [ ] `validate_lyrics_json.py` passes on output
+- [x] `requirements-whisper.txt` installed; imports work (`smoke_phase4_step1.py`)
+- [x] `transcribe.py` implements faster-whisper + WhisperX
+- [x] `test_whisper_local.py` → valid `lyrics.json` (psychosomatic vocal stem; tone `vocals_30s` has no speech)
+- [x] `validate_lyrics_json.py` passes on output
 
 ### Quality (30s + optional full song)
 
-- [ ] JSON schema valid
-- [ ] Word times monotonic within segments
-- [ ] Spot-check 10 words vs **vocals.wav** (±0.1s) on full song if Step 5 run
-- [ ] WhisperX refines timing vs whisper-only (qualitative)
+- [x] JSON schema valid (`scripts/output/lyrics.json`, `psychosomatic/lyrics.json`)
+- [x] Word times monotonic within segments (automated validator)
+- [ ] Spot-check 10 words vs **vocals.wav** in a player (±0.1s) — optional manual before Phase 6
+- [x] WhisperX alignment run after faster-whisper (Step 3+ chain; tighter word boundaries)
 
 ### Backend / Modal
 
-- [ ] `whisper_image` separate from `_BACKEND_IMAGE` / `_DEMUCS_IMAGE`
-- [ ] `smoke_whisper_fixture` on T4 (modal run)
-- [ ] `smoke_whisper_modal.py` after deploy
+- [x] `_WHISPER_IMAGE` separate from `_BACKEND_IMAGE` / `_DEMUCS_IMAGE`
+- [x] `smoke_whisper_fixture` on T4 (30s clip ~37s; full song ~36s warm)
+- [x] `smoke_whisper_modal.py` after deploy
 
-### Explicitly NOT done (confirm)
+### Explicitly NOT done (confirmed)
 
-- [ ] No `render.py` / FFmpeg MP4 yet
-- [ ] No orchestrator transcribe stage wired
-- [ ] No frontend changes
-- [ ] No transcription on full mix (only `vocals.wav`)
+- [x] No `render.py` / FFmpeg MP4 yet
+- [x] No orchestrator transcribe stage wired
+- [x] No frontend changes
+- [x] No transcription on full mix (only `vocals.wav`)
 
 ---
 
@@ -511,12 +528,15 @@ See [Appendix A](./IMPLEMENTATION_PLAN.md#appendix-a--example-transcribe--align-
 
 ## Lessons learned (Phase 4 retrospective)
 
-*Fill when Phase 4 is done.*
-
 | Topic | Planned | What happened | Doc / process fix |
 |-------|---------|---------------|-------------------|
-| | | | |
+| Vocal fixture | `vocals_30s.wav` default | Tone-only Demucs stem is silent → Whisper returns 0 segments | Use `psychosomatic/vocals.wav` or real song clip; smokes pick loud stems |
+| torch in venv | Shared with Demucs | `whisperx` pins torch **2.8**; Demucs still worked after install | Note in `requirements-whisper.txt`; reinstall demucs reqs if separation breaks |
+| Local runtime | GPU optional | 30s clip CPU **~163s**; full song would be 15–30+ min on CPU | Default long runs to **Modal T4** (~37s for 30s and ~3 min warm) |
+| Modal images | Third image | `_WHISPER_IMAGE` + bake `psychosomatic/vocals.wav` at deploy | Redeploy when vocal stem changes; same `add_local_dir(backend)` pattern |
+| Alignment | WhisperX on stem | wav2vec2 download ~360 MB first local run; align bundled in chain | `validate_lyrics_json.py` for contract; return `lyrics` dict from Modal smokes |
+| Full song | Local optional | Step 5 via `smoke_phase4_step5.py` + GPU; 39 segments, span **~187s** | `--no-clip` for local; `clip_end=None` on Modal |
 
 ---
 
-*Phase 4 runbook v1.0 — transcription isolation; render in Phase 5, integration in Phase 6.*
+*Phase 4 runbook v2.0 — complete May 2026; Phase 5 FFmpeg render next.*

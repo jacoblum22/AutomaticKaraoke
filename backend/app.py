@@ -17,6 +17,7 @@ _BACKEND_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _BACKEND_DIR.parent
 _FIXTURE_MP3 = _REPO_ROOT / "scripts" / "fixtures" / "sample_30s.mp3"
 _PSYCHO_MP3 = _REPO_ROOT / "scripts" / "fixtures" / "Psychosomatic.mp3"
+_VOCAL_SMOKE_WAV = _REPO_ROOT / "scripts" / "output" / "psychosomatic" / "vocals.wav"
 
 _BACKEND_IMAGE = (
     modal.Image.debian_slim(python_version="3.12")
@@ -37,6 +38,19 @@ if _PSYCHO_MP3.is_file():
         _PSYCHO_MP3, remote_path="/fixtures/Psychosomatic.mp3"
     )
 _DEMUCS_IMAGE = _demucs_image
+
+# Phase 4 — faster-whisper + WhisperX (separate from API + Demucs images)
+_whisper_image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .apt_install("ffmpeg")
+    .pip_install_from_requirements(_BACKEND_DIR / "requirements-whisper.txt")
+    .add_local_dir(_BACKEND_DIR, remote_path="/root")
+)
+if _VOCAL_SMOKE_WAV.is_file():
+    _whisper_image = _whisper_image.add_local_file(
+        _VOCAL_SMOKE_WAV, remote_path="/fixtures/vocals_smoke.wav"
+    )
+_WHISPER_IMAGE = _whisper_image
 
 TERMINAL = frozenset({"done", "failed"})
 POLL_INTERVAL_S = 1
@@ -246,6 +260,89 @@ def smoke_demucs_psychosomatic() -> dict:
         "vocals": str(vocals_path),
         "instrumental": str(instrumental_path),
         "elapsed_s": elapsed,
+    }
+
+
+# --- Phase 4 — Whisper GPU ---
+
+
+@app.function(image=_WHISPER_IMAGE, gpu="T4", timeout=1200)
+def transcribe_vocals_modal(
+    input_path: str,
+    output_json: str,
+    *,
+    clip_end: float | None = None,
+    model_size: str = "medium",
+    language: str = "en",
+) -> str:
+    """Transcribe + align on GPU; returns path to lyrics.json."""
+    from transcribe import transcribe_and_align
+
+    out = transcribe_and_align(
+        input_path,
+        output_json,
+        model_size=model_size,
+        device="cuda",
+        compute_type="float16",
+        language=language,
+        clip_end=clip_end,
+    )
+    return str(out)
+
+
+@app.function(image=_WHISPER_IMAGE, gpu="T4", timeout=1200)
+def smoke_whisper_fixture(*, clip_end: float | None = 30.0) -> dict:
+    """GPU transcribe+align on bundled vocal stem.
+
+    Default ``clip_end=30`` for smokes; pass ``clip_end=None`` for full song (Step 5).
+    """
+    import json
+    import time
+    from pathlib import Path
+
+    from transcribe import log_lyrics_summary, transcribe_and_align
+
+    vocal = Path("/fixtures/vocals_smoke.wav")
+    if not vocal.is_file():
+        raise FileNotFoundError(
+            "vocals_smoke.wav not in image — run Phase 3 on Psychosomatic and redeploy "
+            "(expects scripts/output/psychosomatic/vocals.wav at deploy time)"
+        )
+
+    output = Path("/tmp/lyrics_smoke.json")
+    t0 = time.perf_counter()
+    transcribe_and_align(
+        vocal,
+        output,
+        device="cuda",
+        compute_type="float16",
+        clip_end=clip_end,
+    )
+    elapsed = time.perf_counter() - t0
+
+    lyrics = json.loads(output.read_text(encoding="utf-8"))
+    log_lyrics_summary(lyrics)
+
+    segments = lyrics.get("segments") or []
+    word_count = sum(len(s.get("words") or []) for s in segments)
+    if not segments or word_count == 0:
+        raise RuntimeError("smoke produced empty lyrics")
+
+    all_words = [w for s in segments for w in s["words"]]
+    print(f"LYRICS_PATH={output}", flush=True)
+    print(f"ELAPSED_S={elapsed:.1f}", flush=True)
+
+    return {
+        "lyrics_path": str(output),
+        "elapsed_s": elapsed,
+        "language": lyrics.get("language", "en"),
+        "segments": len(segments),
+        "words": word_count,
+        "first_word": all_words[0]["word"],
+        "first_start": all_words[0]["start"],
+        "last_word": all_words[-1]["word"],
+        "last_end": all_words[-1]["end"],
+        "lyrics": lyrics,
     }
 
 

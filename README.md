@@ -2,7 +2,7 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 4 in progress (Whisper + WhisperX) — Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md).
+**Current phase:** Phase 5 next (FFmpeg + ASS render) — Phase 4 Whisper ✓, Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
@@ -98,6 +98,18 @@ cd ..
 
 Full-song quality (add your own MP3, gitignored): `scripts/copy_psychosomatic_fixture.py` → `scripts/smoke_phase3_step7.py`. Outputs: `scripts/output/psychosomatic/vocals.wav` + `instrumental.wav`. See [PHASE_3.md](docs/PHASE_3.md).
 
+## Whisper (Phase 4) ✓
+
+```powershell
+pip install -r backend/requirements-whisper.txt
+.\.venv\Scripts\python.exe scripts\test_whisper_local.py --clip-end 30
+.\.venv\Scripts\python.exe scripts\validate_lyrics_json.py scripts\output\lyrics.json
+.\.venv\Scripts\python.exe scripts\smoke_whisper_modal.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase4_step5.py   # full-song lyrics.json
+```
+
+Requires `scripts/output/psychosomatic/vocals.wav` at deploy time (baked into `_WHISPER_IMAGE`). See [PHASE_4.md](docs/PHASE_4.md).
+
 ## Project phases
 
 | Phase | Focus |
@@ -106,7 +118,8 @@ Full-song quality (add your own MP3, gitignored): `scripts/copy_psychosomatic_fi
 | 1 | Frontend + mock job API ✓ |
 | 2 | Modal job endpoints |
 | 3 | Demucs isolation ✓ |
-| 4–5 | Whisper+WhisperX, FFmpeg (isolated scripts) |
+| 4 | Whisper + WhisperX ✓ |
+| 5 | FFmpeg + ASS render (isolated) |
 | 6 | Full pipeline integration |
 | 7 | Hardening (upload, auth, performance) |
 

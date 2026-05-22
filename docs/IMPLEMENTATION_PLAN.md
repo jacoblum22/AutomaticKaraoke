@@ -239,23 +239,22 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 ---
 
-### Phase 4 — Transcription + alignment in isolation (faster-whisper → WhisperX)
+### Phase 4 — Transcription + alignment in isolation ✓
 
-**Detailed runbook:** [PHASE_4.md](./PHASE_4.md) — `transcribe.py`, `lyrics.json` contract, local CLI, Modal `whisper_image`, eight steps.
+**Detailed runbook:** [PHASE_4.md](./PHASE_4.md) — complete May 2026.
 
-**Entry criteria:** [Phase 3](./PHASE_3.md#exit-criteria--phase-4) exit (vocals stem; Demucs ear-test recommended). Inputs: `scripts/fixtures/vocals_30s.wav` and/or `scripts/output/psychosomatic/vocals.wav`.
+**Goal:** **`vocals.wav` only** → faster-whisper → WhisperX → **`lyrics.json`**. **Not** the full mix.
 
-**Goal:** **`vocals.wav` only** → faster-whisper → WhisperX → **`lyrics.json`** with word-level timestamps. **Not** the full mix.
+| Delivered | Notes |
+|-----------|--------|
+| `transcribe.py` | `transcribe_vocals`, `align_lyrics`, `transcribe_and_align` |
+| Local CLI | `test_whisper_local.py`, `validate_lyrics_json.py` |
+| Modal | `_WHISPER_IMAGE`, `transcribe_vocals_modal`, `smoke_whisper_fixture` |
+| Outputs | `scripts/output/lyrics.json` (30s); `psychosomatic/lyrics.json` (full song, 342 words) |
 
-| Step | Library | Notes |
-|------|---------|--------|
-| Transcribe | `faster-whisper` | `medium`; `word_timestamps=True`, `vad_filter=True` |
-| Align | `whisperx` | wav2vec2 on same vocal stem |
-| Modal | `_WHISPER_IMAGE` on **T4** | Separate from `_DEMUCS_IMAGE` and `_BACKEND_IMAGE` |
+**Runtime (reference):** local CPU ~163s / 30s clip; Modal T4 ~37s (30s or full song warm).
 
-**Tasks (summary):** whisper deps → `transcribe.py` → local `test_whisper_local.py` → validate JSON → optional full-song run → Modal GPU → deploy smoke → checklist.
-
-**Exit:** [PHASE_4 checklist](./PHASE_4.md#phase-4-completion-checklist); reliable `lyrics.json` from 30s fixture + optional Psychosomatic vocal stem.
+**Exit:** [PHASE_4 checklist](./PHASE_4.md#phase-4-completion-checklist) ✓; stub API unchanged.
 
 ---
 
@@ -450,8 +449,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 2. ~~Deploy frontend preview~~ ✓ — https://automatic-karaoke.vercel.app  
 3. ~~**Add real Modal `start-job` / `job-status` + Dict job store (Phase 2)**~~ ✓ — [PHASE_2.md](./PHASE_2.md).  
 4. ~~**Phase 3 — Demucs in isolation**~~ ✓ — [PHASE_3.md](./PHASE_3.md) (Psychosomatic ear-test signed off May 2026).  
-5. **Phase 4 — Transcription + alignment** — [PHASE_4.md](./PHASE_4.md) (Steps 1–2 done; WhisperX + Modal next).  
-6. Add `test_render_local.py` with ASS + FFmpeg (Phase 5).  
+5. ~~**Phase 4 — Transcription + alignment**~~ ✓ — [PHASE_4.md](./PHASE_4.md).  
+6. **Phase 5 — FFmpeg + ASS render** — `test_render_local.py`, `lyrics.json` + `instrumental.wav` → MP4.  
 7. Replace stubs with real Modal orchestration: Demucs → transcribe+align → render (Phase 6).
 
 ---
@@ -512,4 +511,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 1.9 — Phase 3 Demucs complete; Phase 4 in progress.*
+*Document version: 2.0 — Phase 4 transcription complete; Phase 5 render next.*
