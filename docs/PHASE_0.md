@@ -18,7 +18,7 @@
 
 **Modal:** `jacoblum22` (CLI + dashboard)
 
-**Note:** CLI `npx vercel --yes` also created a separate project `frontend` → https://frontend-three-beryl-30.vercel.app. Prefer **`automatic-karaoke`** for git-push deploys; delete the extra `frontend` project in Vercel dashboard if you want one project only.
+**Vercel:** Use **`automatic-karaoke`** only (GitHub-linked). Do not add a second project via `npx vercel --yes` from `frontend/` ([retrospective](./PHASE_0.md#lessons-learned-phase-0-retrospective)).
 
 ---
 
@@ -304,7 +304,7 @@ Complete steps **in order**. Do not skip verification gates.
 | 1.1 | Open terminal at project root | `cd "c:\Users\jacob\OneDrive - UBC\Desktop\Personal Projects\AutomaticKaraoke"` |
 | 1.2 | Initialize git | `git init` |
 | 1.3 | Create root `.gitignore` | See [File minimums](#file-minimums) |
-| 1.4 | Initial commit (docs only OK) | `git add docs/ README.md .gitignore` then `git commit -m "docs: add implementation plan and phase 0"` |
+| 1.4 | Initial commit | Docs-only commit is fine; a single later “scaffold” commit (Steps 2–3 together) also works |
 
 **Gate:** [x] `git status` is clean after commit (or only intentional untracked paths).
 
@@ -356,7 +356,7 @@ Complete steps **in order**. Do not skip verification gates.
 | 4.5 | Verify profile | `modal profile current` (after 4.4) |
 | 4.6 | Optional: dry-run stub deploy | `cd backend && modal deploy app.py` — expect success with empty app **or** document “deploy in Phase 2” if stub has no functions yet |
 
-**Note:** If `modal deploy` fails because there are zero functions, that is acceptable in Phase 0. Exit criterion is `modal profile` works. Add a trivial `@app.function()` in `app.py` only if you want deploy proof in Phase 0.
+**Note:** If `modal deploy` fails because there are zero functions, that is acceptable in Phase 0. Exit criterion is `modal profile current` + `modal app list`. Add a trivial `@app.function()` in `app.py` only if you want deploy proof in Phase 0.
 
 **Gate:**
 
@@ -395,27 +395,32 @@ Complete steps **in order**. Do not skip verification gates.
 
 ### Step 6 — GitHub remote (optional but recommended)
 
+**Use `main` only.** If the first push creates `master`, GitHub’s default stays on the stale branch until you fix it (see [Lessons learned](#lessons-learned-phase-0-retrospective)).
+
 | # | Action | Command |
 |---|--------|---------|
-| 6.1 | Create empty repo on GitHub | e.g. `AutomaticKaraoke` |
-| 6.2 | Add remote | `git remote add origin git@github.com:<user>/AutomaticKaraoke.git` |
-| 6.3 | Push | `git branch -M main && git push -u origin main` |
+| 6.1 | Rename local branch to `main` **before** first push | `git branch -M main` |
+| 6.2 | Create repo + push (recommended) | `gh repo create AutomaticKaraoke --public --source=. --remote=origin --push` |
+| 6.3 | Or manual remote | `git remote add origin …` then `git push -u origin main` |
+| 6.4 | Confirm default branch | GitHub → Settings → Default branch = `main`; delete `master` if it exists |
 
-**Gate:** [x] GitHub shows `docs/`, `frontend/`, `backend/`, `scripts/` — verified via API 2026-05-22
+**Gate:** GitHub shows `docs/`, `frontend/`, `backend/`, `scripts/` on **`main`**
 
 | 6.x | Done? |
 |-----|-------|
-| 6.1 create repo | [x] `jacoblum22/AutomaticKaraoke` |
-| 6.2 remote | [x] `origin` → GitHub |
-| 6.3 push | [x] branch `main` |
+| 6.1 branch `main` | [x] (after consolidating away `master`) |
+| 6.2 `gh repo create` / push | [x] `jacoblum22/AutomaticKaraoke` |
+| 6.4 default `main` | [x] |
 
 ---
 
 ### Step 7 — Vercel + Modal account wiring (no production backend yet)
 
+**Avoid duplicate projects:** GitHub import (e.g. `automatic-karaoke`) **or** `npx vercel --yes` from `frontend/` — not both unless you delete the extra project. Prefer **GitHub-linked** `automatic-karaoke` for `main` auto-deploys.
+
 | # | Action |
 |---|--------|
-| 7.1 | Log in to Vercel; “Add New Project” → Import GitHub repo |
+| 7.1 | Log in to Vercel; “Add New Project” → Import GitHub repo (`main`, root `frontend`) |
 | 7.2 | Set **Root Directory** to `frontend` |
 | 7.3 | Framework preset: Vite |
 | 7.4 | Environment variable: `VITE_API_URL` = `http://localhost:5173` (placeholder until Phase 2) |
@@ -578,7 +583,7 @@ Phase 0 is **complete** when:
 3. Modal CLI is authenticated (`modal profile current` + `modal app list`). — [x] (`jacoblum22`)
 4. Directory layout matches the [target tree](#target-repository-tree) and no Phase 1–7 logic is implemented yet. — [x]
 
-**Next:** [Phase 1 — Frontend only (mock backend)](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend).
+**Next:** [Phase 1 — Frontend only (mock backend)](./PHASE_1.md).
 
 ---
 
@@ -587,12 +592,35 @@ Phase 0 is **complete** when:
 | Problem | Fix |
 |---------|-----|
 | `npm create vite` targets wrong folder | Delete partial `frontend/` and rerun from repo root |
+| PowerShell `&&` syntax error | Use `;` between commands, or run commands separately |
 | PowerShell blocks venv activation | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | OneDrive sync conflicts on `node_modules` | Pause sync for project folder or move repo outside OneDrive |
+| `modal token new` / `vercel login` in CI or agent | **Manual only** — browser device flow; cannot be completed headlessly |
 | `modal token new` fails | Run outside corporate VPN; retry browser auth |
 | Vercel build fails | Ensure root directory is `frontend`, not repo root |
+| Two Vercel projects (`automatic-karaoke` + `frontend`) | Keep GitHub-linked project; delete CLI stray or ignore it |
+| `master` and `main` on GitHub | Set default to `main`, merge or delete `master` |
 | Huge accidental commit | Ensure `.gitignore` before `git add .`; never commit `.env` |
 
 ---
 
-*Phase 0 planning doc v1.6 — Phase 0 complete; production https://automatic-karaoke.vercel.app; 34/34 checklist.*
+## Lessons learned (Phase 0 retrospective)
+
+What differed from the original plan during our run — capture here so the next person (or Phase 1+) avoids rework.
+
+| Topic | Planned | What happened | Doc / process fix |
+|-------|---------|---------------|-------------------|
+| **Git branches** | Single `main` | First `gh repo create --push` created **`master`**; `main` added later → two branches, Vercel defaulted to `master` | Rename to `main` **before** first push; set GitHub default; delete `master` (Step 6) |
+| **Commits** | Separate docs commit (Step 1.4) | One combined scaffold commit was enough | Step 1.4 allows either pattern |
+| **Modal CLI** | `modal profile` | Subcommand is **`modal profile current`** | Updated gates and README |
+| **Vercel auth** | CLI in runbook | Agent could not finish device login; you completed via dashboard + CLI | Document as manual; optional dashboard-first |
+| **Vercel projects** | One project | Dashboard **`automatic-karaoke`** + CLI **`frontend`** (two URLs) | Step 7: pick one path; keep GitHub-linked project |
+| **PowerShell** | Bash-style `&&` in examples | Failed on Windows PowerShell | Use `;` or separate lines (troubleshooting) |
+| **Checklist count** | Fixed number | Grew as optional editor items were added | Optional items labeled; required exit = required rows only |
+| **R2 account** | “Account noted” | Documented in README for Phase 2 without creating bucket yet | Acceptable for Phase 0 |
+
+**No plan change needed:** pipeline order (Demucs → transcribe, not parallel), Phase 0 scope, folder layout, or Phase 1 entry criteria.
+
+---
+
+*Phase 0 planning doc v1.7 — adds retrospective + Step 6/7 pitfalls from actual run.*

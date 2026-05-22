@@ -2,7 +2,7 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 0 complete → starting Phase 1 (see [docs/PHASE_0.md](docs/PHASE_0.md)).
+**Current phase:** Phase 1 — frontend mock pipeline (see [docs/PHASE_1.md](docs/PHASE_1.md)). Phase 0: [docs/PHASE_0.md](docs/PHASE_0.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
@@ -23,13 +23,16 @@ Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (D
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local   # VITE_USE_MOCK=true for Phase 1
 npm run dev
 ```
 
-Open http://localhost:5173 — you should see the Phase 0 placeholder page.
+Open http://localhost:5173 — upload an audio file to run the **mock** job (no GPU, no Modal). Progress advances through separation → transcription → alignment → render; on completion, a sample video plays.
 
 ```bash
 npm run build
+npm run smoke:mock    # mock API only
+npm run smoke:client  # client.ts via mock (needs .env.local)
 ```
 
 ## Python / Modal (Step 4)
@@ -49,20 +52,16 @@ Use **two terminals** for day-to-day dev: one with `cd frontend && npm run dev`,
 
 Optional editor setup: `.vscode/extensions.json`, project context in `AGENTS.md` — see [docs/PHASE_0.md](docs/PHASE_0.md#cursor-and-editor-tooling-optional).
 
-## Vercel preview (Step 7)
+## Vercel (production preview)
 
-**Option A — Dashboard (after GitHub push):** [vercel.com/new](https://vercel.com/new) → Import `jacoblum22/AutomaticKaraoke` → Root Directory: `frontend` → Framework: Vite → add env `VITE_API_URL` = `http://localhost:5173` (placeholder).
+Project: **automatic-karaoke** (root `frontend/`), linked to GitHub `main`.
 
-**Option B — CLI:**
+Required env for Phase 1 mock on Vercel:
 
-```powershell
-cd frontend
-npx vercel login
-npx vercel --yes
-npx vercel env add VITE_API_URL production   # paste placeholder URL when prompted
-```
+- `VITE_USE_MOCK` = `true` (Production + Preview)
+- `VITE_API_URL` — optional while mock is on; ignored when `VITE_USE_MOCK=true`
 
-Preview should show the Phase 0 placeholder page (“Automatic Karaoke — scaffold ready”).
+Live: https://automatic-karaoke.vercel.app
 
 ## Project phases
 

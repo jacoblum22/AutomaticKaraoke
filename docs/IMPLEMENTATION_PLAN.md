@@ -84,7 +84,8 @@ AutomaticKaraoke/
 ├── README.md
 ├── docs/
 │   ├── IMPLEMENTATION_PLAN.md          # this file
-│   └── PHASE_0.md                      # Phase 0 runbook
+│   ├── PHASE_0.md                      # Phase 0 runbook
+│   └── PHASE_1.md                      # Phase 1 runbook
 ├── frontend/                           # Phase 0 scaffold → Phase 1 — Vercel
 │   ├── .env.example                    # VITE_API_URL
 │   ├── package.json
@@ -150,47 +151,30 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 **Optional (same phase, not exit criteria):** Cursor/VS Code extensions, Vercel MCP/plugin (after Vercel project exists), project rules — [Appendix D](#appendix-d--developer-tooling-cursor--editor).
 
+**Status:** Complete (2026-05-22). Production frontend: https://automatic-karaoke.vercel.app. Retrospective pitfalls (dual branches, dual Vercel projects, manual OAuth): [PHASE_0 § Lessons learned](./PHASE_0.md#lessons-learned-phase-0-retrospective).
+
 ---
 
 ### Phase 1 — Frontend only (mock backend)
 
-**Entry criteria:** [Phase 0](./PHASE_0.md#exit-criteria--phase-1) complete (Vite scaffold, `types/job.ts`, component stubs, `npm run build` passes).
+**Detailed runbook:** [PHASE_1.md](./PHASE_1.md) — mock strategy, file tree, eight steps, and completion checklist.
 
-**Goal:** Upload UX, fake job progress, video preview — zero real processing.
+**Entry criteria:** [Phase 0](./PHASE_0.md#exit-criteria--phase-1) complete (34/34); Vercel project **`automatic-karaoke`** only.
 
-| Component | Behavior |
-|-----------|----------|
-| `UploadForm` | Drag/drop or file picker; validate type/size (e.g. max 50MB, audio/*) |
-| `ProgressTracker` | Simulated states: `uploading` → `separating` → `transcribing` → `aligning` → `rendering` → `done` |
-| `VideoPlayer` | Play a static sample MP4 from `/public` or a hardcoded URL |
-| Env | `VITE_API_URL` — for now points to mock or MSW |
+**Goal:** Upload UX, in-browser mock job progress (poll every 2s), sample video on `done` — zero real processing.
 
-**Mock API contract (define now, implement for real in Phase 2):**
+**Key decisions (see PHASE_1 for detail):**
 
-```typescript
-// POST /start-job
-// Body: multipart or { audio_base64 } — prefer presigned upload later; base64 OK for prototype
-// Response: { job_id: string }
+| Topic | Choice |
+|-------|--------|
+| Mock | In-browser `src/mocks/mockJobApi.ts` when `VITE_USE_MOCK=true` |
+| Vercel | Set `VITE_USE_MOCK=true` on Production + Preview — do not rely on `localhost` API URL |
+| Sample video | `frontend/public/sample.mp4` (or stable HTTPS URL in mock) |
+| API contract | Same `job.ts` types; Phase 2 swaps `client.ts` to real Modal `fetch` |
 
-// GET /job-status?job_id=
-// Response: {
-//   status: "queued" | "separating" | "transcribing" | "aligning" | "rendering" | "done" | "failed",
-//   progress?: number,        // 0-100 optional
-//   message?: string,
-//   video_url?: string,       // when done
-//   error?: string            // when failed
-// }
-```
+**Tasks (summary):** validation helper → mock API → client switch → polling hook → three components → App wiring → Vercel env + deploy → README.
 
-**Verification checklist**
-
-- [ ] Upload shows filename and size
-- [ ] Invalid file shows error
-- [ ] Polling stops on `done` / `failed`
-- [ ] Video plays in player
-- [ ] Works on Vercel preview deploy with mock API (JSON server, MSW, or separate tiny mock Modal function)
-
-**Exit:** Frontend deployed to Vercel; all UI states reachable without real GPU work.
+**Exit:** [PHASE_1 checklist](./PHASE_1.md#phase-1-completion-checklist) complete; full flow on local + https://automatic-karaoke.vercel.app without GPU work.
 
 ---
 
@@ -471,8 +455,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 
 | Phase | Effort |
 |-------|--------|
-| 0 Bootstrap | 2–4 hours |
-| 1 Frontend mock | 1–2 days |
+| 0 Bootstrap | 2–4 hours (done) |
+| 1 Frontend mock | 4–8 hours (see [PHASE_1.md](./PHASE_1.md)) |
 | 2 Backend shell | 1 day |
 | 3 Demucs isolate | 1–2 days |
 | 4 Transcribe + WhisperX isolate | 1–2 days |
@@ -501,9 +485,9 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 
 ## 12. Next actions (ordered)
 
-0. **Complete Phase 0** per [PHASE_0.md](./PHASE_0.md) (git, skeleton, Vite scaffold, Modal CLI, optional GitHub + Vercel preview).  
-1. Implement mock upload + job polling UI (Phase 1).  
-2. Deploy frontend preview with sample video if not done in Phase 0 Step 7.  
+0. ~~**Complete Phase 0**~~ ✓ — see [PHASE_0 retrospective](./PHASE_0.md#lessons-learned-phase-0-retrospective).  
+1. **Complete Phase 1** per [PHASE_1.md](./PHASE_1.md) (mock UI + `VITE_USE_MOCK` on Vercel).  
+2. ~~Deploy frontend preview~~ ✓ — https://automatic-karaoke.vercel.app (Phase 1 redeploy after mock).  
 3. Add real Modal `start-job` / `job-status` + Dict job store (Phase 2).  
 4. Add `scripts/fixtures/sample_30s.mp3` and implement `test_demucs_local.py` (Phase 3).  
 5. Implement `test_whisper_local.py` on `vocals.wav` — faster-whisper + WhisperX → `lyrics.json` (Phase 4).  
@@ -567,4 +551,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 1.3 — adds Appendix D (Cursor/editor tooling); Phase 0 Step 8 note; OneDrive risk.*
+*Document version: 1.5 — adds [PHASE_1.md](./PHASE_1.md) runbook; Phase 1 summary points to in-browser mock.*

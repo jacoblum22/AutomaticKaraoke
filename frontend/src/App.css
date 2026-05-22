@@ -1,37 +1,238 @@
 .app {
-  max-width: 40rem;
+  max-width: 36rem;
   margin: 0 auto;
-  padding: 3rem 1.5rem;
+  padding: 2rem 1.25rem 3rem;
+  text-align: left;
+}
+
+.app__header {
   text-align: center;
+  margin-bottom: 2rem;
 }
 
-.subtitle {
-  color: #888;
-  margin-top: 0.25rem;
+.app__header h1 {
+  margin: 0 0 0.5rem;
 }
 
-.stubs {
-  margin: 2rem 0;
-  padding: 1.5rem;
-  border: 1px dashed #444;
-  border-radius: 8px;
+.app__subtitle {
+  color: var(--text);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.app__panel {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1.5rem;
 }
 
-.stubs p {
+.app__error {
+  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.1);
+  border: 1px solid rgba(185, 28, 28, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.app__footer {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.app__footer code {
+  font-size: 0.8rem;
+}
+
+/* Upload */
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dropzone:hover:not(.dropzone--disabled),
+.dropzone--active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.dropzone--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dropzone__title {
+  margin: 0 0 0.35rem;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.dropzone__hint {
   margin: 0;
   font-size: 0.9rem;
-  color: #aaa;
+  color: var(--text);
 }
 
-footer {
-  margin-top: 2rem;
-  font-size: 0.85rem;
-  color: #666;
+.upload-form__file {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
-footer code {
-  font-size: 0.8rem;
+.upload-form__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+/* Buttons */
+.btn {
+  font: inherit;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn--secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-h);
+  align-self: center;
+}
+
+.btn--secondary:hover {
+  background: var(--accent-bg);
+}
+
+/* Progress */
+.progress-tracker {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--social-bg);
+}
+
+.progress-tracker__bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progress-tracker__bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.progress-tracker__message {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-h);
+}
+
+.progress-tracker__error {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.progress-tracker__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.progress-tracker__step {
+  font-size: 0.9rem;
+  color: var(--text);
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.progress-tracker__step::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.progress-tracker__step--done {
+  color: var(--text);
+}
+
+.progress-tracker__step--done::before {
+  background: var(--accent);
+}
+
+.progress-tracker__step--active {
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.progress-tracker__step--active::before {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* Video */
+.video-player {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-player--empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  background: var(--code-bg);
+  border: 1px dashed var(--border);
+}
+
+.video-player--empty p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.video-player__el {
+  width: 100%;
+  display: block;
+  max-height: 360px;
 }
