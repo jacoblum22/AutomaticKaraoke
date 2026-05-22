@@ -10,12 +10,14 @@
 
 | Status | Steps |
 |--------|--------|
-| Done | **1–4** Git, skeleton, Vite frontend, Modal venv + CLI (`jacoblum22`) · **5** README/docs · **8** extensions + `AGENTS.md` |
-| Not started | **6** GitHub remote · **7** Vercel preview · **7.7** Vercel MCP (after Vercel project) |
+| Done | **1–6** through GitHub push · **8** ergonomics + `.cursor/mcp.json` template |
+| **You finish** | **7** Vercel preview — CLI needs `npx vercel login` (see [README § Vercel](../README.md#vercel-preview-step-7)) or import repo in [vercel.com/new](https://vercel.com/new) |
 
-**Verified (Step 4):** `modal profile current` → `jacoblum22`; `modal app list` → authenticated (no apps deployed yet).
+**GitHub:** https://github.com/jacoblum22/AutomaticKaraoke (`main` branch)
 
-**Next up:** Steps 6–7 (GitHub + Vercel preview), or start [Phase 1](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend) — hosting is recommended but not required for local mock UI work.
+**Verified:** Modal `jacoblum22` · `npm run build` · repo contents on GitHub (`docs/`, `frontend/`, `backend/`, `scripts/`)
+
+**Next up:** Complete Step 7 (one-time Vercel login + deploy), then Phase 0 exit → [Phase 1](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend).
 
 ---
 
@@ -24,7 +26,7 @@
 Before starting Phase 0, you should have:
 
 - [x] Windows dev machine (or WSL) with admin rights to install tools
-- [ ] GitHub account (for remote repo) — account may exist; remote not configured yet
+- [x] GitHub account (for remote repo) — `jacoblum22/AutomaticKaraoke` pushed to `main`
 - [x] [Node.js](https://nodejs.org/) 20 LTS (or 22) — `node -v` → v22.22.0
 - [x] [Python](https://www.python.org/) 3.11 or 3.12 — `python --version` → 3.12.12
 - [x] [Git](https://git-scm.com/) installed — `git --version` works
@@ -38,8 +40,8 @@ Optional but planned in this project (set up accounts in Phase 0, wire secrets i
 
 Optional CLIs (install when needed; not Phase 0 exit criteria):
 
-- [ ] [Vercel CLI](https://vercel.com/docs/cli) — `npm i -g vercel` or `npx vercel` (Step 7+; alternative to Cursor deploy commands)
-- [ ] [GitHub CLI](https://cli.github.com/) (`gh`) — optional for Step 6 remote + later PRs
+- [ ] [Vercel CLI](https://vercel.com/docs/cli) — `npx vercel` (Step 7; requires `vercel login`)
+- [x] [GitHub CLI](https://cli.github.com/) (`gh`) — used for Step 6 (`gh` 2.76.0, `jacoblum22`)
 
 See [Cursor and editor tooling (optional)](#cursor-and-editor-tooling-optional) for Cursor plugins, MCP, and extension recommendations.
 
@@ -386,7 +388,7 @@ Complete steps **in order**. Do not skip verification gates.
 |-----|-------|
 | 5.1 README | [x] |
 | 5.2 IMPLEMENTATION_PLAN → PHASE_0 link | [x] |
-| 5.3 Commit scaffold | [x] (`c75839f` on `master`) |
+| 5.3 Commit scaffold | [x] (`c75839f`, `6baaf18`; pushed to `main`) |
 
 ---
 
@@ -398,7 +400,13 @@ Complete steps **in order**. Do not skip verification gates.
 | 6.2 | Add remote | `git remote add origin git@github.com:<user>/AutomaticKaraoke.git` |
 | 6.3 | Push | `git branch -M main && git push -u origin main` |
 
-**Gate:** [ ] GitHub shows `docs/`, `frontend/`, `backend/`, `scripts/`.
+**Gate:** [x] GitHub shows `docs/`, `frontend/`, `backend/`, `scripts/` — verified via API 2026-05-22
+
+| 6.x | Done? |
+|-----|-------|
+| 6.1 create repo | [x] `jacoblum22/AutomaticKaraoke` |
+| 6.2 remote | [x] `origin` → GitHub |
+| 6.3 push | [x] branch `main` |
 
 ---
 
@@ -528,20 +536,20 @@ Copy this section into a PR description or issue when done. **All boxes must be 
 
 ### Git / hosting
 
-- [x] Git repo initialized; at least one commit on `main` (currently on branch `master` — rename with `git branch -M main` when pushing)
-- [ ] (Recommended) GitHub remote pushed
-- [ ] (Recommended) Vercel project linked with root `frontend/` and preview deploy works
+- [x] Git repo initialized; at least one commit on `main`
+- [x] (Recommended) GitHub remote pushed — https://github.com/jacoblum22/AutomaticKaraoke
+- [ ] (Recommended) Vercel project linked with root `frontend/` and preview deploy works — **run Step 7 below**
 
 ### Accounts (create if missing)
 
 - [x] Modal account + CLI authenticated (`jacoblum22`)
-- [ ] Vercel account + project imported
-- [ ] Cloudflare R2 or AWS S3 account noted for Phase 2+ (no keys in repo)
+- [ ] Vercel account + project imported — login + deploy pending (see README)
+- [x] Cloudflare R2 or AWS S3 account noted for Phase 2+ (no keys in repo) — documented in README; bucket created in Phase 2
 
 ### Editor / Cursor (optional — not required for exit)
 
 - [x] (Optional) `.vscode/extensions.json` with ESLint + Python recommendations
-- [ ] (Optional) Vercel MCP or plugin configured (after Step 7)
+- [x] (Optional) Vercel MCP or plugin configured — `.cursor/mcp.json` added; authenticate in Cursor on first use (after Vercel project exists)
 - [x] (Optional) `.cursor/rules` or `AGENTS.md` with project conventions
 
 ### Explicitly NOT done (confirm)
@@ -558,7 +566,7 @@ Copy this section into a PR description or issue when done. **All boxes must be 
 
 Phase 0 is **complete** when:
 
-1. The [completion checklist](#phase-0-completion-checklist) is fully checked. — **31 / 34** (Steps 1–5, 8, Modal auth; Steps 6–7 + Vercel/R2 accounts pending)
+1. The [completion checklist](#phase-0-completion-checklist) is fully checked. — **33 / 34** (only Vercel preview deploy pending)
 2. A new clone of the repo can run `npm install && npm run dev` in `frontend/` without code changes. — [x]
 3. Modal CLI is authenticated (`modal profile current` + `modal app list`). — [x] (`jacoblum22`)
 4. Directory layout matches the [target tree](#target-repository-tree) and no Phase 1–7 logic is implemented yet. — [x]
@@ -580,4 +588,4 @@ Phase 0 is **complete** when:
 
 ---
 
-*Phase 0 planning doc v1.4 — Step 4 complete (Modal `jacoblum22`, CLI verified); 31/34 checklist; Steps 6–7 optional before Phase 1.*
+*Phase 0 planning doc v1.5 — Step 6 complete (GitHub `main`); Step 7 Vercel deploy requires your `vercel login`; 33/34 checklist.*

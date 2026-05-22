@@ -2,9 +2,13 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 0 — project scaffold (see [docs/PHASE_0.md](docs/PHASE_0.md)).
+**Current phase:** Phase 0 — finishing hosting (see [docs/PHASE_0.md](docs/PHASE_0.md)).
+
+**Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)
+
+**Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
 ## Prerequisites
 
@@ -42,6 +46,21 @@ modal profile current
 Use **two terminals** for day-to-day dev: one with `cd frontend && npm run dev`, one with the venv activated for `modal` / `python scripts/...`.
 
 Optional editor setup: `.vscode/extensions.json`, project context in `AGENTS.md` — see [docs/PHASE_0.md](docs/PHASE_0.md#cursor-and-editor-tooling-optional).
+
+## Vercel preview (Step 7)
+
+**Option A — Dashboard (after GitHub push):** [vercel.com/new](https://vercel.com/new) → Import `jacoblum22/AutomaticKaraoke` → Root Directory: `frontend` → Framework: Vite → add env `VITE_API_URL` = `http://localhost:5173` (placeholder).
+
+**Option B — CLI:**
+
+```powershell
+cd frontend
+npx vercel login
+npx vercel --yes
+npx vercel env add VITE_API_URL production   # paste placeholder URL when prompted
+```
+
+Preview should show the Phase 0 placeholder page (“Automatic Karaoke — scaffold ready”).
 
 ## Project phases
 
