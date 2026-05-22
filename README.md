@@ -26,14 +26,22 @@ Open http://localhost:5173 — you should see the Phase 0 placeholder page.
 npm run build
 ```
 
-## Python / Modal (after Step 4)
+## Python / Modal (Step 4)
+
+From the repo root:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r backend/requirements.txt
-modal profile
+python -c "import modal"
+modal token new    # one-time browser login
+modal profile current
 ```
+
+Use **two terminals** for day-to-day dev: one with `cd frontend && npm run dev`, one with the venv activated for `modal` / `python scripts/...`.
+
+Optional editor setup: `.vscode/extensions.json`, project context in `AGENTS.md` — see [docs/PHASE_0.md](docs/PHASE_0.md#cursor-and-editor-tooling-optional).
 
 ## Project phases
 

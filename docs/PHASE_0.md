@@ -6,24 +6,42 @@
 
 **Out of scope for Phase 0:** Real upload UI, Modal endpoints, Demucs/Whisper, FFmpeg, R2 uploads, Vercel production deploy with a real backend. Those are Phases 1–7.
 
+### Current progress
+
+| Status | Steps |
+|--------|--------|
+| Done | **1–4** Git, skeleton, Vite frontend, Modal venv + CLI (`jacoblum22`) · **5** README/docs · **8** extensions + `AGENTS.md` |
+| Not started | **6** GitHub remote · **7** Vercel preview · **7.7** Vercel MCP (after Vercel project) |
+
+**Verified (Step 4):** `modal profile current` → `jacoblum22`; `modal app list` → authenticated (no apps deployed yet).
+
+**Next up:** Steps 6–7 (GitHub + Vercel preview), or start [Phase 1](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend) — hosting is recommended but not required for local mock UI work.
+
 ---
 
 ## Entry criteria
 
 Before starting Phase 0, you should have:
 
-- [ ] Windows dev machine (or WSL) with admin rights to install tools
-- [ ] GitHub account (for remote repo)
-- [ ] [Node.js](https://nodejs.org/) 20 LTS (or 22) — `node -v` prints `v20.x` or `v22.x`
-- [ ] [Python](https://www.python.org/) 3.11 or 3.12 — `python --version` works in terminal
-- [ ] [Git](https://git-scm.com/) installed — `git --version` works
-- [ ] Code editor (Cursor / VS Code)
+- [x] Windows dev machine (or WSL) with admin rights to install tools
+- [ ] GitHub account (for remote repo) — account may exist; remote not configured yet
+- [x] [Node.js](https://nodejs.org/) 20 LTS (or 22) — `node -v` → v22.22.0
+- [x] [Python](https://www.python.org/) 3.11 or 3.12 — `python --version` → 3.12.12
+- [x] [Git](https://git-scm.com/) installed — `git --version` works
+- [x] Code editor (Cursor / VS Code)
 
 Optional but planned in this project (set up accounts in Phase 0, wire secrets in later phases):
 
-- [ ] [Modal](https://modal.com/) account
+- [x] [Modal](https://modal.com/) account — workspace `jacoblum22`, CLI authenticated
 - [ ] [Vercel](https://vercel.com/) account
 - [ ] [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) or S3 bucket (account only; no keys required in Phase 0)
+
+Optional CLIs (install when needed; not Phase 0 exit criteria):
+
+- [ ] [Vercel CLI](https://vercel.com/docs/cli) — `npm i -g vercel` or `npx vercel` (Step 7+; alternative to Cursor deploy commands)
+- [ ] [GitHub CLI](https://cli.github.com/) (`gh`) — optional for Step 6 remote + later PRs
+
+See [Cursor and editor tooling (optional)](#cursor-and-editor-tooling-optional) for Cursor plugins, MCP, and extension recommendations.
 
 ---
 
@@ -99,6 +117,9 @@ AutomaticKaraoke/
 | `frontend/src` mock service worker / MSW | 1 |
 | Modal secrets, R2 credentials | 2+ |
 | `vercel.json` | 1 (only if needed beyond defaults) |
+| `.vscode/extensions.json` | 8 (optional — recommended extensions) |
+| `.cursor/mcp.json` (Vercel MCP) | 7 (optional — after Vercel project exists) |
+| `.cursor/rules` or `AGENTS.md` | 8 (optional — project conventions for agents) |
 
 ---
 
@@ -144,7 +165,7 @@ Thumbs.db
 - Link to `docs/IMPLEMENTATION_PLAN.md`
 - Prerequisites (Node, Python, Modal CLI, optional Vercel CLI)
 - How to run frontend dev server (`cd frontend && npm run dev`)
-- How to verify Modal CLI (`modal profile`)
+- How to verify Modal CLI (`modal profile current` after `modal token new`)
 - Phase list with “current phase” note
 - License placeholder or “TBD”
 
@@ -282,7 +303,7 @@ Complete steps **in order**. Do not skip verification gates.
 | 1.3 | Create root `.gitignore` | See [File minimums](#file-minimums) |
 | 1.4 | Initial commit (docs only OK) | `git add docs/ README.md .gitignore` then `git commit -m "docs: add implementation plan and phase 0"` |
 
-**Gate:** `git status` is clean after commit (or only intentional untracked paths).
+**Gate:** [x] `git status` is clean after commit (or only intentional untracked paths).
 
 ---
 
@@ -296,7 +317,7 @@ Complete steps **in order**. Do not skip verification gates.
 | 2.4 | Create `backend/` stub Python modules |
 | 2.5 | Create `frontend/src/components/`, `api/`, `types/` with stub files **after** Vite scaffold (Step 3) |
 
-**Gate:** Tree matches [Target repository tree](#target-repository-tree) (except Vite-generated files until Step 3).
+**Gate:** [x] Tree matches [Target repository tree](#target-repository-tree).
 
 ---
 
@@ -316,8 +337,8 @@ Complete steps **in order**. Do not skip verification gates.
 
 **Gate:**
 
-- [ ] Browser shows placeholder app at `http://localhost:5173`
-- [ ] `npm run build` exits 0 and creates `frontend/dist/`
+- [x] Browser shows placeholder app at `http://localhost:5173`
+- [x] `npm run build` exits 0 and creates `frontend/dist/`
 
 ---
 
@@ -329,15 +350,25 @@ Complete steps **in order**. Do not skip verification gates.
 | 4.2 | Activate venv | PowerShell: `.\.venv\Scripts\Activate.ps1` |
 | 4.3 | Install Modal only | `pip install modal` |
 | 4.4 | Install Modal CLI auth | `modal token new` (browser flow) |
-| 4.5 | Verify profile | `modal profile` |
+| 4.5 | Verify profile | `modal profile current` (after 4.4) |
 | 4.6 | Optional: dry-run stub deploy | `cd backend && modal deploy app.py` — expect success with empty app **or** document “deploy in Phase 2” if stub has no functions yet |
 
 **Note:** If `modal deploy` fails because there are zero functions, that is acceptable in Phase 0. Exit criterion is `modal profile` works. Add a trivial `@app.function()` in `app.py` only if you want deploy proof in Phase 0.
 
 **Gate:**
 
-- [ ] `modal profile` shows your workspace
-- [ ] `python -c "import modal"` succeeds inside venv
+- [x] `modal profile current` shows your workspace → `jacoblum22`
+- [x] `python -c "import modal"` succeeds inside venv (Modal 1.4.3)
+- [x] `modal app list` succeeds (confirms token; empty app table is OK)
+
+| 4.x | Done? |
+|-----|-------|
+| 4.1 venv | [x] |
+| 4.2 activate | [x] (documented in README) |
+| 4.3 `pip install modal` | [x] |
+| 4.4 `modal token new` | [x] |
+| 4.5 `modal profile current` | [x] |
+| 4.6 optional deploy | [ ] deferred to Phase 2 (stub `app.py` has no functions) |
 
 ---
 
@@ -349,7 +380,13 @@ Complete steps **in order**. Do not skip verification gates.
 | 5.2 | Ensure `docs/IMPLEMENTATION_PLAN.md` links to this file for Phase 0 |
 | 5.3 | Commit scaffold | `git add .` (respect `.gitignore`), `git commit -m "chore: phase 0 project scaffold"` |
 
-**Gate:** New contributor can read README and know next step is Phase 1.
+**Gate:** [x] New contributor can read README and know next step is Phase 1.
+
+| 5.x | Done? |
+|-----|-------|
+| 5.1 README | [x] |
+| 5.2 IMPLEMENTATION_PLAN → PHASE_0 link | [x] |
+| 5.3 Commit scaffold | [x] (`c75839f` on `master`) |
 
 ---
 
@@ -361,7 +398,7 @@ Complete steps **in order**. Do not skip verification gates.
 | 6.2 | Add remote | `git remote add origin git@github.com:<user>/AutomaticKaraoke.git` |
 | 6.3 | Push | `git branch -M main && git push -u origin main` |
 
-**Gate:** GitHub shows `docs/`, `frontend/`, `backend/`, `scripts/`.
+**Gate:** [ ] GitHub shows `docs/`, `frontend/`, `backend/`, `scripts/`.
 
 ---
 
@@ -375,11 +412,12 @@ Complete steps **in order**. Do not skip verification gates.
 | 7.4 | Environment variable: `VITE_API_URL` = `http://localhost:5173` (placeholder until Phase 2) |
 | 7.5 | Deploy preview — should show Phase 0 placeholder page |
 | 7.6 | Modal dashboard: note workspace name for later `modal deploy` |
+| 7.7 | (Optional) After Vercel project exists: [Vercel MCP](https://vercel.com/changelog/cursor-now-supported-on-vercel-mcp) or Vercel Cursor plugin — see [§ Cursor and editor tooling](#cursor-and-editor-tooling-optional) |
 
 **Gate:**
 
 - [ ] Vercel preview URL loads the placeholder React app
-- [ ] Modal dashboard accessible; token stored locally
+- [x] Modal dashboard accessible; token stored locally (profile `jacoblum22`, `modal app list` OK)
 
 **Not required in Phase 0:** Custom domain, R2 secrets, CORS on Modal endpoints.
 
@@ -389,11 +427,72 @@ Complete steps **in order**. Do not skip verification gates.
 
 | # | Action |
 |---|--------|
-| 8.1 | Add recommended VS Code extensions list (optional): `extensions.json` with ESLint, Python, Modal |
+| 8.1 | Add recommended VS Code extensions list (optional): `.vscode/extensions.json` — ESLint, Python, Pylance; see [§ Cursor and editor tooling](#cursor-and-editor-tooling-optional) for full list |
 | 8.2 | Document in README: Python venv activation + `npm run dev` in two terminals |
 | 8.3 | Confirm `scripts/output/` is gitignored and empty |
+| 8.4 | (Optional) Add `.cursor/rules` or `AGENTS.md` with stack conventions (Vite frontend, Modal backend, async start+poll, vocal-stem-only transcription) |
 
-**Gate:** You can start frontend and activate Python venv from README instructions alone.
+**Gate:** [x] You can start frontend and activate Python venv from README instructions alone.
+
+| 8.x | Done? |
+|-----|-------|
+| 8.1 `.vscode/extensions.json` | [x] |
+| 8.2 README dev instructions | [x] |
+| 8.3 `scripts/output/` gitignored | [x] |
+| 8.4 `.cursor/rules` or `AGENTS.md` (optional) | [x] (`AGENTS.md`) |
+
+---
+
+## Cursor and editor tooling (optional)
+
+**Not required for Phase 0 exit.** Finish Steps 4–7 (Modal CLI, GitHub, Vercel preview) before spending time on marketplace plugins.
+
+### VS Code / Cursor extensions (Step 8.1)
+
+| Extension | Purpose | When |
+|-----------|---------|------|
+| ESLint | Vite template already uses ESLint; extension surfaces issues in-editor | Phase 0+ |
+| Python + Pylance | `backend/`, `scripts/` | Phase 0+ |
+| Ruff (optional) | Python lint/format as modules grow | Phase 2+ |
+| REST Client or Thunder Client (optional) | Call `start-job` / `job-status` without a separate HTTP app | Phase 2+ |
+
+**Skip for this project:** third-party “Modal VS Code” Jupyter extensions — they target remote notebook kernels, not Modal `web_endpoint`s + orchestrator.
+
+Example `.vscode/extensions.json` recommendation IDs: `dbaeumer.vscode-eslint`, `ms-python.python`, `ms-python.vscode-pylance`, `charliermarsh.ruff` (optional), `humao.rest-client` or `rangav.vscode-thunder-client` (optional, Phase 2+).
+
+### Vercel plugin and MCP (after Step 7)
+
+| Tool | Fit for this repo | Install |
+|------|-------------------|---------|
+| [Vercel MCP](https://vercel.com/changelog/cursor-now-supported-on-vercel-mcp) | Inspect failed preview builds, env vars, deployments from Cursor | Add to `.cursor/mcp.json`: `"vercel": { "url": "https://mcp.vercel.com" }`; log in when prompted |
+| [Vercel Cursor plugin](https://cursor.com/marketplace/vercel) | `/env`, deploy helpers, deployment troubleshooting | Cursor: `/add-plugin vercel` or `npx plugins add vercel/vercel-plugin` |
+
+**Moderate value:** much of the plugin knowledge graph targets Next.js, AI SDK, and Turborepo. This repo uses **Vite + React** on Vercel (static frontend only) and **Modal** for all Python/GPU work — so the plugin is an **ops helper** for hosting and `VITE_API_URL`, not a core dev dependency.
+
+**Low priority until Step 7:** without a linked Vercel project, plugin/MCP have little to attach to.
+
+### Cursor project context (no plugin)
+
+- **Project rules** (`.cursor/rules` or `AGENTS.md`): document phase boundaries, async start+poll API, “transcribe on vocal stem only,” no ML in Phase 0.
+- **Modal LLM context:** when editing `backend/`, reference [Developing with LLMs](https://modal.com/docs/guide/developing-with-llms) and `https://modal.com/llms-full.txt` in agent context.
+
+### System tools (install before the phase that needs them)
+
+| Tool | Phase | Notes |
+|------|-------|-------|
+| Vercel CLI | 7+ | `npm i -g vercel` or `npx vercel` |
+| `gh` CLI | 6+ | GitHub remote + PRs (optional) |
+| FFmpeg on PATH | 5 | `scripts/test_render_local.py` |
+| CUDA (optional) | 3–4 | Local Demucs/Whisper experiments only; Modal GPU is primary |
+
+### Defer (low fit for v1)
+
+| Item | Why |
+|------|-----|
+| Next.js / AI SDK / Turborepo Cursor plugins | Wrong stack — Vite, not Next.js |
+| Modal Jupyter VS Code extension | Notebook workflow, not web-endpoint backend |
+| Cloudflare R2 IDE plugins | Dashboard/Wrangler enough until Phase 2; secrets go in Modal |
+| Demucs/Whisper-specific IDE plugins | Use `scripts/test_*.py` + Modal logs instead |
 
 ---
 
@@ -403,49 +502,55 @@ Copy this section into a PR description or issue when done. **All boxes must be 
 
 ### Repository structure
 
-- [ ] Root `.gitignore` covers `node_modules`, `.venv`, `.env`, `scripts/output/`
-- [ ] `docs/IMPLEMENTATION_PLAN.md` present
-- [ ] `docs/PHASE_0.md` present (this file)
-- [ ] `README.md` describes project and how to run dev commands
-- [ ] `frontend/` exists with Vite React TS template
-- [ ] `frontend/src/types/job.ts` defines `JobStatus` and API response types
-- [ ] `frontend/src/components/` has three stub components
-- [ ] `frontend/src/api/client.ts` stub reads `VITE_API_URL`
-- [ ] `frontend/.env.example` documents `VITE_API_URL`
-- [ ] `backend/` has `app.py`, `jobs.py`, `separate.py`, `transcribe.py`, `render.py`, `storage.py`
-- [ ] `backend/requirements.txt` lists `modal` (and commented future deps)
-- [ ] `backend/.env.example` documents future R2 vars
-- [ ] `scripts/fixtures/`, `scripts/output/`, stub test scripts, and READMEs exist
+- [x] Root `.gitignore` covers `node_modules`, `.venv`, `.env`, `scripts/output/`
+- [x] `docs/IMPLEMENTATION_PLAN.md` present
+- [x] `docs/PHASE_0.md` present (this file)
+- [x] `README.md` describes project and how to run dev commands
+- [x] `frontend/` exists with Vite React TS template
+- [x] `frontend/src/types/job.ts` defines `JobStatus` and API response types
+- [x] `frontend/src/components/` has three stub components
+- [x] `frontend/src/api/client.ts` stub reads `VITE_API_URL`
+- [x] `frontend/.env.example` documents `VITE_API_URL`
+- [x] `backend/` has `app.py`, `jobs.py`, `separate.py`, `transcribe.py`, `render.py`, `storage.py`
+- [x] `backend/requirements.txt` lists `modal` (and commented future deps)
+- [x] `backend/.env.example` documents future R2 vars
+- [x] `scripts/fixtures/`, `scripts/output/`, stub test scripts, and READMEs exist
 
 ### Tooling verification
 
-- [ ] `node -v` ≥ 20
-- [ ] `python --version` is 3.11 or 3.12
-- [ ] `cd frontend && npm run dev` serves placeholder UI
-- [ ] `cd frontend && npm run build` succeeds
-- [ ] Python venv created; `pip install modal` works
-- [ ] `modal profile` succeeds after `modal token new`
-- [ ] `python -c "import modal"` works in venv
+- [x] `node -v` ≥ 20
+- [x] `python --version` is 3.11 or 3.12
+- [x] `cd frontend && npm run dev` serves placeholder UI
+- [x] `cd frontend && npm run build` succeeds
+- [x] Python venv created; `pip install modal` works
+- [x] `modal profile current` succeeds after `modal token new` → `jacoblum22`
+- [x] `python -c "import modal"` works in venv
 
 ### Git / hosting
 
-- [ ] Git repo initialized; at least one commit on `main`
+- [x] Git repo initialized; at least one commit on `main` (currently on branch `master` — rename with `git branch -M main` when pushing)
 - [ ] (Recommended) GitHub remote pushed
 - [ ] (Recommended) Vercel project linked with root `frontend/` and preview deploy works
 
 ### Accounts (create if missing)
 
-- [ ] Modal account + CLI authenticated
+- [x] Modal account + CLI authenticated (`jacoblum22`)
 - [ ] Vercel account + project imported
 - [ ] Cloudflare R2 or AWS S3 account noted for Phase 2+ (no keys in repo)
 
+### Editor / Cursor (optional — not required for exit)
+
+- [x] (Optional) `.vscode/extensions.json` with ESLint + Python recommendations
+- [ ] (Optional) Vercel MCP or plugin configured (after Step 7)
+- [x] (Optional) `.cursor/rules` or `AGENTS.md` with project conventions
+
 ### Explicitly NOT done (confirm)
 
-- [ ] No real file upload UI (Phase 1)
-- [ ] No Modal `web_endpoint` / job polling (Phase 2)
-- [ ] No `pip install` of torch, demucs, faster-whisper, whisperx (Phase 3–4)
-- [ ] No `sample_30s.mp3` required yet (Phase 3)
-- [ ] No FFmpeg render script (Phase 5)
+- [x] No real file upload UI (Phase 1)
+- [x] No Modal `web_endpoint` / job polling (Phase 2)
+- [x] No `pip install` of torch, demucs, faster-whisper, whisperx (Phase 3–4)
+- [x] No `sample_30s.mp3` required yet (Phase 3)
+- [x] No FFmpeg render script (Phase 5)
 
 ---
 
@@ -453,10 +558,10 @@ Copy this section into a PR description or issue when done. **All boxes must be 
 
 Phase 0 is **complete** when:
 
-1. The [completion checklist](#phase-0-completion-checklist) is fully checked.
-2. A new clone of the repo can run `npm install && npm run dev` in `frontend/` without code changes.
-3. Modal CLI is authenticated (`modal profile`).
-4. Directory layout matches the [target tree](#target-repository-tree) and no Phase 1–7 logic is implemented yet.
+1. The [completion checklist](#phase-0-completion-checklist) is fully checked. — **31 / 34** (Steps 1–5, 8, Modal auth; Steps 6–7 + Vercel/R2 accounts pending)
+2. A new clone of the repo can run `npm install && npm run dev` in `frontend/` without code changes. — [x]
+3. Modal CLI is authenticated (`modal profile current` + `modal app list`). — [x] (`jacoblum22`)
+4. Directory layout matches the [target tree](#target-repository-tree) and no Phase 1–7 logic is implemented yet. — [x]
 
 **Next:** [Phase 1 — Frontend only (mock backend)](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend).
 
@@ -475,4 +580,4 @@ Phase 0 is **complete** when:
 
 ---
 
-*Phase 0 planning doc v1.0*
+*Phase 0 planning doc v1.4 — Step 4 complete (Modal `jacoblum22`, CLI verified); 31/34 checklist; Steps 6–7 optional before Phase 1.*

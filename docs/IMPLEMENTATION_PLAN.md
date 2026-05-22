@@ -138,15 +138,17 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 | 1 | `git init`, root `.gitignore`, initial docs commit |
 | 2 | `scripts/` + `backend/` skeleton (stub `.py`, READMEs, `fixtures/` + `output/`) |
 | 3 | `npm create vite@latest frontend -- --template react-ts`; add `types/job.ts`, component stubs, `api/client.ts`, `.env.example`; verify `npm run dev` + `npm run build` |
-| 4 | Python venv, `pip install modal`, `modal token new`, `modal profile` |
+| 4 | Python venv, `pip install modal`, `modal token new`, `modal profile current` |
 | 5 | Root `README.md`, cross-link docs, commit scaffold |
 | 6 | (Recommended) GitHub remote + push |
 | 7 | (Recommended) Vercel project, root dir `frontend`, placeholder `VITE_API_URL`, preview deploy |
-| 8 | README dev instructions; confirm `scripts/output/` gitignored |
+| 8 | README dev instructions; optional `.vscode/extensions.json` + Cursor rules; confirm `scripts/output/` gitignored — see [PHASE_0 § Cursor tooling](./PHASE_0.md#cursor-and-editor-tooling-optional) |
 
-**Verification:** All boxes in [PHASE_0 completion checklist](./PHASE_0.md#phase-0-completion-checklist) — including `npm run build`, `modal profile`, stub tree present, and explicit “not done” confirmations (no upload UI, no web endpoints, no ML installs).
+**Verification:** All boxes in [PHASE_0 completion checklist](./PHASE_0.md#phase-0-completion-checklist) — including `npm run build`, `modal profile current` (after `modal token new`), stub tree present, and explicit “not done” confirmations (no upload UI, no web endpoints, no ML installs).
 
 **Exit criteria:** Phase 0 checklist fully checked; fresh clone runs `cd frontend && npm install && npm run dev`; Modal CLI authenticated; layout matches [PHASE_0 target tree](./PHASE_0.md#target-repository-tree); zero Phase 1–7 application logic.
+
+**Optional (same phase, not exit criteria):** Cursor/VS Code extensions, Vercel MCP/plugin (after Vercel project exists), project rules — [Appendix D](#appendix-d--developer-tooling-cursor--editor).
 
 ---
 
@@ -461,6 +463,7 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 | Large uploads on Vercel | Cap file size; move to R2 presigned upload |
 | GPU preemption | Short jobs (&lt;2 min); retry once on failure |
 | Copyright / abuse | ToS + rate limits; no public anonymous high limits |
+| OneDrive sync on dev folder | Locked/slow `node_modules` or `.venv`; pause sync or move repo — [PHASE_0 troubleshooting](./PHASE_0.md#troubleshooting-common-on-windows) |
 
 ---
 
@@ -546,6 +549,22 @@ result = whisperx.align(segments, align_model, metadata, audio, device="cuda")
 - R2/S3 credentials  
 - (Optional) custom domain for CORS allowlist stored as env on web endpoint
 
+## Appendix D — Developer tooling (Cursor / editor)
+
+Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling](./PHASE_0.md#cursor-and-editor-tooling-optional). Summary:
+
+| Category | Recommendation | Priority |
+|----------|----------------|----------|
+| **Must finish first** | Modal CLI (`modal token new`), Vercel project (root `frontend/`), GitHub remote | Phase 0 Steps 4–7 |
+| **VS Code extensions** | ESLint, Python, Pylance; Ruff optional; REST Client/Thunder Client in Phase 2+ | Step 8 — optional |
+| **Vercel MCP / plugin** | Deploy/env troubleshooting; moderate value for **Vite** (much plugin content is Next.js-specific) | After Step 7 — optional |
+| **Cursor rules** | `.cursor/rules` or `AGENTS.md` — stack, async API, vocal-stem-only transcription | Step 8 — optional |
+| **Modal agent context** | `modal.com/llms-full.txt`, [developing with LLMs](https://modal.com/docs/guide/developing-with-llms) when editing `backend/` | Any phase |
+| **System CLIs** | `vercel` CLI (Step 7+), `gh` (Step 6+), FFmpeg on PATH (Phase 5), CUDA optional (local ML only) | Per phase |
+| **Defer** | Next.js/AI SDK plugins, Modal Jupyter extension, R2 IDE plugins, Demucs/Whisper IDE plugins | Low fit for v1 |
+
+**Stack reminder:** Vercel hosts **static Vite + React** only; **Modal** runs all Python, GPU, and FFmpeg orchestration. Do not expect Vercel marketplace plugins to help with Demucs, Whisper, or Modal deploys.
+
 ---
 
-*Document version: 1.2 — Phase 0 overview aligned with PHASE_0.md; repo layout notes Phase 0 vs later artifacts.*
+*Document version: 1.3 — adds Appendix D (Cursor/editor tooling); Phase 0 Step 8 note; OneDrive risk.*
