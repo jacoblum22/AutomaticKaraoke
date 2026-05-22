@@ -10,14 +10,15 @@
 
 | Status | Steps |
 |--------|--------|
-| Done | **1–6** through GitHub push · **8** ergonomics + `.cursor/mcp.json` template |
-| **You finish** | **7** Vercel preview — CLI needs `npx vercel login` (see [README § Vercel](../README.md#vercel-preview-step-7)) or import repo in [vercel.com/new](https://vercel.com/new) |
+| **Phase 0 complete** | **1–8** — ready for [Phase 1](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend) |
 
-**GitHub:** https://github.com/jacoblum22/AutomaticKaraoke (`main` branch)
+**GitHub:** https://github.com/jacoblum22/AutomaticKaraoke (`main` only)
 
-**Verified:** Modal `jacoblum22` · `npm run build` · repo contents on GitHub (`docs/`, `frontend/`, `backend/`, `scripts/`)
+**Vercel (GitHub-linked):** https://automatic-karaoke.vercel.app — placeholder UI verified
 
-**Next up:** Complete Step 7 (one-time Vercel login + deploy), then Phase 0 exit → [Phase 1](./IMPLEMENTATION_PLAN.md#phase-1--frontend-only-mock-backend).
+**Modal:** `jacoblum22` (CLI + dashboard)
+
+**Note:** CLI `npx vercel --yes` also created a separate project `frontend` → https://frontend-three-beryl-30.vercel.app. Prefer **`automatic-karaoke`** for git-push deploys; delete the extra `frontend` project in Vercel dashboard if you want one project only.
 
 ---
 
@@ -35,12 +36,12 @@ Before starting Phase 0, you should have:
 Optional but planned in this project (set up accounts in Phase 0, wire secrets in later phases):
 
 - [x] [Modal](https://modal.com/) account — workspace `jacoblum22`, CLI authenticated
-- [ ] [Vercel](https://vercel.com/) account
+- [x] [Vercel](https://vercel.com/) account — `automatic-karaoke` + CLI (`jacoblum22`)
 - [ ] [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) or S3 bucket (account only; no keys required in Phase 0)
 
 Optional CLIs (install when needed; not Phase 0 exit criteria):
 
-- [ ] [Vercel CLI](https://vercel.com/docs/cli) — `npx vercel` (Step 7; requires `vercel login`)
+- [x] [Vercel CLI](https://vercel.com/docs/cli) — `npx vercel login` + deploy OK
 - [x] [GitHub CLI](https://cli.github.com/) (`gh`) — used for Step 6 (`gh` 2.76.0, `jacoblum22`)
 
 See [Cursor and editor tooling (optional)](#cursor-and-editor-tooling-optional) for Cursor plugins, MCP, and extension recommendations.
@@ -424,8 +425,14 @@ Complete steps **in order**. Do not skip verification gates.
 
 **Gate:**
 
-- [ ] Vercel preview URL loads the placeholder React app
+- [x] Vercel preview URL loads the placeholder React app — https://automatic-karaoke.vercel.app
 - [x] Modal dashboard accessible; token stored locally (profile `jacoblum22`, `modal app list` OK)
+
+| 7.x | Done? |
+|-----|-------|
+| 7.1–7.5 dashboard deploy | [x] `automatic-karaoke` on `main` / `frontend` root |
+| 7.6 Modal workspace | [x] `jacoblum22` |
+| 7.7 Vercel MCP/plugin | [ ] optional — `.cursor/mcp.json` ready |
 
 **Not required in Phase 0:** Custom domain, R2 secrets, CORS on Modal endpoints.
 
@@ -538,12 +545,12 @@ Copy this section into a PR description or issue when done. **All boxes must be 
 
 - [x] Git repo initialized; at least one commit on `main`
 - [x] (Recommended) GitHub remote pushed — https://github.com/jacoblum22/AutomaticKaraoke
-- [ ] (Recommended) Vercel project linked with root `frontend/` and preview deploy works — **run Step 7 below**
+- [x] (Recommended) Vercel project linked with root `frontend/` and preview deploy works — https://automatic-karaoke.vercel.app
 
 ### Accounts (create if missing)
 
 - [x] Modal account + CLI authenticated (`jacoblum22`)
-- [ ] Vercel account + project imported — login + deploy pending (see README)
+- [x] Vercel account + project imported — `automatic-karaoke` (GitHub) + CLI auth
 - [x] Cloudflare R2 or AWS S3 account noted for Phase 2+ (no keys in repo) — documented in README; bucket created in Phase 2
 
 ### Editor / Cursor (optional — not required for exit)
@@ -566,7 +573,7 @@ Copy this section into a PR description or issue when done. **All boxes must be 
 
 Phase 0 is **complete** when:
 
-1. The [completion checklist](#phase-0-completion-checklist) is fully checked. — **33 / 34** (only Vercel preview deploy pending)
+1. The [completion checklist](#phase-0-completion-checklist) is fully checked. — **34 / 34** ✓
 2. A new clone of the repo can run `npm install && npm run dev` in `frontend/` without code changes. — [x]
 3. Modal CLI is authenticated (`modal profile current` + `modal app list`). — [x] (`jacoblum22`)
 4. Directory layout matches the [target tree](#target-repository-tree) and no Phase 1–7 logic is implemented yet. — [x]
@@ -588,4 +595,4 @@ Phase 0 is **complete** when:
 
 ---
 
-*Phase 0 planning doc v1.5 — Step 6 complete (GitHub `main`); Step 7 Vercel deploy requires your `vercel login`; 33/34 checklist.*
+*Phase 0 planning doc v1.6 — Phase 0 complete; production https://automatic-karaoke.vercel.app; 34/34 checklist.*

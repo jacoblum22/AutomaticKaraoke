@@ -2,9 +2,11 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 0 — finishing hosting (see [docs/PHASE_0.md](docs/PHASE_0.md)).
+**Current phase:** Phase 0 complete → starting Phase 1 (see [docs/PHASE_0.md](docs/PHASE_0.md)).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
+
+**Live preview:** https://automatic-karaoke.vercel.app
 
 **Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)
 
