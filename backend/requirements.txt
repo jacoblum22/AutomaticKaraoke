@@ -1,0 +1,4 @@
+modal>=0.64.0
+# Phase 3+: demucs, torch
+# Phase 4+: faster-whisper, whisperx
+# Phase 5+: ffmpeg-python (system ffmpeg still required)
