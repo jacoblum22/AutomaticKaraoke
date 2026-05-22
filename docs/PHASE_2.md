@@ -18,7 +18,7 @@
 | Done | **5** frontend `.env.local` + Modal API — fifth testable point ✓ |
 | Done | **6** job durability + 404 — sixth testable point ✓ |
 | Done | **7** Vercel production env + deploy — seventh testable point ✓ |
-| In progress | **8** README + completion checklist |
+| Done | **8** README + `main` push — Phase 2 code on GitHub ✓ |
 
 **Frontend (Phase 2):** https://automatic-karaoke.vercel.app — Production `VITE_USE_MOCK=false`, `VITE_API_URL=https://jacoblum22--karaoke-api.modal.run`.
 
@@ -443,8 +443,8 @@ Remove-Item Env:MODAL_API_URL -ErrorAction SilentlyContinue
 
 **Gate:**
 
-- [ ] GitHub `main` has Phase 2 backend + doc updates
-- [ ] Vercel production deploy uses real API env vars
+- [x] GitHub `main` has Phase 2 backend + doc updates (`5dc4046`)
+- [x] Vercel production deploy uses real API env vars + CLI/`main` deploy (May 2026)
 
 ---
 
@@ -457,13 +457,13 @@ Remove-Item Env:MODAL_API_URL -ErrorAction SilentlyContinue
 - [x] `jobs.py` uses `modal.Dict` named `karaoke-jobs`
 - [x] `orchestrator.py` stub advances all `JobStatus` values including `aligning`
 - [x] `app.py` exposes `POST /start-job` and `GET /job-status` (via `web.py` + `karaoke_api` ASGI)
-- [ ] `start-job` returns in &lt;2s; work runs in spawned function
+- [x] `start-job` returns in &lt;2s; work runs in spawned function
 - [x] CORS allows `automatic-karaoke.vercel.app`, preview `*.vercel.app`, localhost dev ports
 - [x] `modal deploy app.py` succeeds from `backend/`
 
 ### Frontend integration
 
-- [ ] `VITE_USE_MOCK=false` documented in `.env.example`
+- [x] `VITE_USE_MOCK=false` documented in `.env.example` / `.env.modal`
 - [x] `client.ts` works against deployed Modal base URL (`npm run smoke:modal`)
 - [ ] Local `npm run dev` — full happy path with mock **off**
 - [ ] https://automatic-karaoke.vercel.app — full happy path with mock **off**
