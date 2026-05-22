@@ -11,15 +11,11 @@
 
 | Status | Steps |
 |--------|--------|
-| Done | **1** sample.mp4 + `validateAudio.ts` |
-| Done | **2** `mockJobApi.ts` — first testable point ✓ |
-| Done | **3** `client.ts` + `VITE_USE_MOCK` — second testable point (API layer) ✓ |
-| Done | **4–6** polling hook, UI components, `App.tsx` — third testable point (local dev) ✓ |
-| Not started | **7–8** Vercel mock deploy, README + commit |
+| **Phase 1 complete** | **1–8** — ready for [Phase 2](./IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml) |
 
-**Production URL (Phase 0 placeholder today):** https://automatic-karaoke.vercel.app
+**Production (mock):** https://automatic-karaoke.vercel.app — `VITE_USE_MOCK=true` on Vercel Production (`7e0518d` on `main`).
 
-**Next after Phase 1:** [Phase 2 — Backend shell](./IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml) (real Modal endpoints, still stub pipeline).
+**Next after Phase 1:** [Phase 2 — Backend shell](./PHASE_2.md) (real Modal endpoints, still stub pipeline).
 
 ---
 
@@ -343,16 +339,16 @@ Complete in order. Each **Gate** must pass before the next step.
 | # | Action |
 |---|--------|
 | 7.1 | Vercel → **automatic-karaoke** → Settings → Environment Variables |
-| 7.2 | Add `VITE_USE_MOCK` = `true` for **Production** and **Preview** |
+| 7.2 | Add `VITE_USE_MOCK` = `true` for **Production** (and **Preview** if you use PR previews) |
 | 7.3 | Keep or remove `VITE_API_URL` on Vercel — ignored when mock is true; can leave placeholder |
 | 7.4 | Push to `main`; wait for deploy |
 | 7.5 | Test full upload flow on https://automatic-karaoke.vercel.app |
 
 **Gate:**
 
-- [ ] Preview deploy shows Phase 1 UI (not “Phase 0 scaffold”)
-- [ ] Mock job completes; sample video plays on production URL
-- [ ] No console errors about failed fetch to localhost
+- [x] Production deploy shows Phase 1 UI (not “Phase 0 scaffold”)
+- [x] Mock job completes; sample video plays on production URL
+- [x] `VITE_USE_MOCK=true` on Vercel Production; no fetch to API when mock is on
 
 **Do not** deploy a second Vercel project from `npx vercel --yes` in `frontend/` — use GitHub-linked **`automatic-karaoke`** only ([Phase 0 lesson](./PHASE_0.md#lessons-learned-phase-0-retrospective)).
 
@@ -368,13 +364,13 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] GitHub `main` has Phase 1 code; Vercel auto-deploy succeeded
+- [x] GitHub `main` has Phase 1 code (`7e0518d`); Vercel production deploy succeeded
 
 ---
 
 ## Phase 1 completion checklist
 
-**All required boxes** must be checked before [Phase 2](./IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml).
+**All required boxes checked** ✓ — safe to start [Phase 2](./IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml).
 
 ### Mock + API layer
 
@@ -405,25 +401,25 @@ Complete in order. Each **Gate** must pass before the next step.
 - [x] `npm run build` passes
 - [x] `npm run lint` passes
 - [x] Local `npm run dev` — full happy path
-- [ ] https://automatic-karaoke.vercel.app — full happy path with `VITE_USE_MOCK=true`
+- [x] https://automatic-karaoke.vercel.app — full happy path with `VITE_USE_MOCK=true`
 
 ### Explicitly NOT done (confirm)
 
-- [ ] No real upload to backend / R2
-- [ ] No Modal `web_endpoint` calls
-- [ ] No changes to `backend/` pipeline logic
-- [ ] No Demucs / Whisper / FFmpeg
+- [x] No real upload to backend / R2
+- [x] No Modal `web_endpoint` calls
+- [x] No changes to `backend/` pipeline logic
+- [x] No Demucs / Whisper / FFmpeg
 
 ---
 
 ## Exit criteria → Phase 2
 
-Phase 1 is **complete** when:
+Phase 1 is **complete** ✓ (May 2026):
 
-1. [Completion checklist](#phase-1-completion-checklist) required items are checked.
-2. A user can upload an audio file on **local** and **Vercel** and see mock progress → sample video — without GPU work.
-3. `client.ts` has real `fetch` stubs ready (commented or behind `!USE_MOCK`) matching the same types.
-4. Vercel env documents path to Phase 2: `VITE_USE_MOCK=false` + real `VITE_API_URL`.
+1. [x] [Completion checklist](#phase-1-completion-checklist) — all required items checked.
+2. [x] Upload on **local** and **Vercel** → mock progress → sample video — no GPU work.
+3. [x] `client.ts` has real `fetch` paths behind `!isMockMode()` (`start-job`, `job-status`) matching `job.ts` types.
+4. [x] `.env.example` documents Phase 2: `VITE_USE_MOCK=false` + `VITE_API_URL` (Modal base URL).
 
 **Next:** [Phase 2 — Backend shell](./IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml) — Modal `start-job` / `job-status`, stub orchestrator, CORS for `automatic-karaoke.vercel.app`.
 
@@ -451,4 +447,4 @@ Phase 1 is **complete** when:
 
 ---
 
-*Phase 1 planning doc v1.2 — Steps 1–6 code complete; next: confirm Step 5/6 in `npm run dev`, then Step 7 (Vercel `VITE_USE_MOCK=true`).*
+*Phase 1 runbook v1.3 — **complete** (Steps 1–8). Next: [Phase 2](./IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml).*

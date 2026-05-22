@@ -2,13 +2,13 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 1 — frontend mock pipeline (see [docs/PHASE_1.md](docs/PHASE_1.md)). Phase 0: [docs/PHASE_0.md](docs/PHASE_0.md).
+**Current phase:** Phase 1 complete → starting [Phase 2](docs/IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml) (Modal API shell). Runbooks: [PHASE_1.md](docs/PHASE_1.md), [PHASE_0.md](docs/PHASE_0.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Live preview:** https://automatic-karaoke.vercel.app
 
-**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)
+**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md)
 
 **Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
@@ -68,7 +68,7 @@ Live: https://automatic-karaoke.vercel.app
 | Phase | Focus |
 |-------|--------|
 | 0 | Repo skeleton, Vite scaffold, stubs |
-| 1 | Frontend + mock job API |
+| 1 | Frontend + mock job API ✓ |
 | 2 | Modal job endpoints |
 | 3–5 | Demucs, Whisper+WhisperX, FFmpeg (isolated scripts) |
 | 6 | Full pipeline integration |
