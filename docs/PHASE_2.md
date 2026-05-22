@@ -11,9 +11,16 @@
 
 | Status | Steps |
 |--------|--------|
-| Not started | **1–8** — job store → endpoints → deploy → frontend wiring → Vercel |
+| Done | **1** `jobs.py` + `modal.Dict` — first testable point ✓ |
+| Done | **2** `orchestrator.py` stub pipeline — second testable point ✓ |
+| Done | **3** HTTP + CORS (`karaoke-api`) — third testable point ✓ |
+| Done | **4** `modal deploy` + smoke on production URL — fourth testable point ✓ |
+| Done | **5** frontend `.env.local` + Modal API — fifth testable point ✓ |
+| Done | **6** job durability + 404 — sixth testable point ✓ |
+| Done | **7** Vercel production env + deploy — seventh testable point ✓ |
+| In progress | **8** README + completion checklist |
 
-**Frontend (Phase 1, still mock on Vercel):** https://automatic-karaoke.vercel.app — `VITE_USE_MOCK=true` until Step 7.
+**Frontend (Phase 2):** https://automatic-karaoke.vercel.app — Production `VITE_USE_MOCK=false`, `VITE_API_URL=https://jacoblum22--karaoke-api.modal.run`.
 
 **Modal workspace:** `jacoblum22` (CLI authenticated in Phase 0).
 
@@ -72,9 +79,10 @@ Primary work in **`backend/`**. Small **`frontend/`** env and copy updates only.
 backend/
 ├── .env.example                 (update) — document Dict name, optional R2 placeholders
 ├── requirements.txt             (unchanged) — modal only; no torch/demucs yet
-├── app.py                       (content) — Modal App, web endpoints, CORS, spawn stub
-├── jobs.py                      (content) — Dict CRUD, JobRecord shape, helpers
-├── orchestrator.py              (content) — stub pipeline (sleep + status updates)
+├── app.py                       (content) — Modal App, `_BACKEND_IMAGE`, smoke fns, `@asgi_app` ✓ Step 3
+├── web.py                       (content) — FastAPI `/start-job`, `/job-status`, CORS ✓ Step 3
+├── jobs.py                      (content) — Dict CRUD, JobRecord shape, helpers ✓ Step 1
+├── orchestrator.py              (content) — stub pipeline (sleep + status updates) ✓ Step 2
 ├── storage.py                   (stub) — R2 helpers deferred to Phase 6/7
 ├── separate.py                  (stub) — unchanged
 ├── transcribe.py                (stub) — unchanged
@@ -88,7 +96,9 @@ frontend/
     └── App.tsx                  (optional) — subtitle “Phase 2 — Modal stub API”
 
 scripts/
-└── smoke_modal_api.py           (content) — curl-equivalent: start job + poll until done
+├── smoke_jobs_dict.py           (content) — Step 1 gate: Dict write + read + failed ✓
+├── smoke_orchestrator.py        (content) — Step 2 gate: spawn stub pipeline + poll ✓
+└── smoke_modal_api.py           (content) — Step 3+ gate: HTTP start + poll until done
 
 docs/
 └── PHASE_2.md                     (this file)
@@ -185,7 +195,9 @@ Return appropriate headers for `OPTIONS` preflight.
 ### `backend/app.py`
 
 - `app = modal.App("karaoke")` (keep name)
-- Import `orchestrator`, `jobs`
+- `_BACKEND_IMAGE` — `debian_slim` + `requirements.txt` + `add_local_dir(backend)` so `jobs.py` imports work in containers
+- Step 1 smoke: `smoke_jobs_write`, `smoke_jobs_read`, `smoke_jobs_failed` on `_BACKEND_IMAGE`
+- Import `orchestrator`, `jobs` (orchestrator in Step 2)
 - `@modal.web_endpoint(method="POST")` → `start_job`: parse upload, `job_id = uuid4()`, `create_job`, `run_stub_pipeline.spawn(job_id)`, return `{job_id}`
 - `@modal.web_endpoint(method="GET")` → `job_status`: read query `job_id`, return JSON or 404
 - CORS helper or `modal.web_endpoint` CORS kwargs per Modal docs
@@ -246,10 +258,16 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] `create_job` + `get_job` + `update_job` work from a Modal function or local `modal run`
-- [ ] Dict entry persists after the test function exits (re-read in a second invocation)
+- [x] `create_job` + `get_job` + `update_job` work from Modal (`app.py` smoke functions)
+- [x] Dict entry persists after the test function exits (`smoke_jobs_read` in a new container)
 
-**First testable point:** isolated job store — no HTTP yet.
+**First testable point:** isolated job store — run from repo root:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_jobs_dict.py
+```
+
+Or: `cd backend` then `modal run app.py::smoke_jobs_write` (look for `JOB_ID=…` in output).
 
 ---
 
@@ -262,10 +280,16 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] Dict shows full progression `queued` → … → `done` with `video_url` set
-- [ ] Simulated failure path sets `failed` + `error` (optional `raise` test)
+- [x] Dict shows full progression `queued` → … → `done` with `video_url` set
+- [x] Simulated failure path sets `failed` + `error` (`simulate_fail` on transcribing)
 
-**Second testable point:** background pipeline without web endpoints.
+**Second testable point:** background pipeline without web endpoints:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_orchestrator.py
+```
+
+Expect ~20–40s (2× `modal run`; stub pipeline ~8s of sleeps inside the happy poll).
 
 ---
 
@@ -279,11 +303,22 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] `modal serve app.py` (dev): `curl`/script POST returns `job_id` in &lt;2s
-- [ ] Poll until `done`; `video_url` present
-- [ ] Preflight `OPTIONS` from browser origin succeeds (check Network tab later)
+- [x] `modal serve app.py` (dev): POST returns `job_id` quickly (~1s; spawn is async)
+- [x] Poll until `done`; `video_url` present
+- [x] Preflight `OPTIONS` from `http://localhost:5173` succeeds
 
-**Third testable point:** HTTP API via `modal serve` + `scripts/smoke_modal_api.py`.
+**Third testable point:** HTTP API via `modal serve` + smoke script:
+
+```powershell
+# Auto-starts modal serve, runs test, then stops serve
+.\.venv\Scripts\python.exe scripts\smoke_modal_api.py --serve
+
+# Or: modal serve in one terminal, then:
+$env:MODAL_API_URL="https://<workspace>--karaoke-api-dev.modal.run"
+.\.venv\Scripts\python.exe scripts\smoke_modal_api.py
+```
+
+Dev URL label: **`karaoke-api`** → `https://jacoblum22--karaoke-api-dev.modal.run` (with `-dev` suffix while serving).
 
 ---
 
@@ -297,9 +332,20 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] Deploy succeeds; URL is HTTPS and stable across redeploys (same workspace app name)
-- [ ] Smoke script passes against production Modal URL
-- [ ] `modal app list` shows `karaoke` app
+- [x] Deploy succeeds; URL is HTTPS and stable across redeploys (app `karaoke`, label `karaoke-api`)
+- [x] Smoke script passes against production Modal URL
+- [x] `modal app list` shows `karaoke` app
+
+**Production API base:** https://jacoblum22--karaoke-api.modal.run
+
+**Fourth testable point:**
+
+```powershell
+cd backend
+modal deploy app.py
+cd ..
+.\.venv\Scripts\python.exe scripts\smoke_modal_deployed.py
+```
 
 ---
 
@@ -313,11 +359,24 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] No CORS errors in browser console
-- [ ] Progress stages match stub timing
+- [x] `npm run smoke:modal` — client layer against deployed API (no browser CORS)
+- [ ] No CORS errors in browser console (`npm run dev` after copying `.env.modal` → `.env.local`)
+- [ ] Progress stages match stub timing (browser)
 - [ ] `<video>` plays the stub `video_url` (cross-origin MP4 OK)
 
-**Fourth testable point:** end-to-end in local dev with real Modal API.
+**Fifth testable point:** end-to-end in local dev with real Modal API.
+
+```powershell
+# Option A — copy env and use dev server
+copy frontend\.env.modal frontend\.env.local
+cd frontend
+npm run dev
+# Footer: Mock mode: off, API URL shown. Upload a small MP3.
+
+# Option B — automated client smoke (no browser)
+cd frontend
+npm run smoke:modal
+```
 
 ---
 
@@ -330,8 +389,25 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] Job survives at least one container recycle / redeploy during polling
-- [ ] Unknown `job_id` returns 404, not 500
+- [x] Job survives many polls across HTTP requests (Dict, not per-container RAM)
+- [x] Optional: survives `modal deploy` mid-job (`--redeploy-mid`)
+- [x] Unknown `job_id` returns 404, not 500
+
+**Sixth testable point:**
+
+```powershell
+# Uses production URL by default (not MODAL_API_URL / -dev)
+.\.venv\Scripts\python.exe scripts\smoke_job_durability.py
+# Stronger (redeploy while job runs, ~1 min):
+.\.venv\Scripts\python.exe scripts\smoke_job_durability.py --redeploy-mid
+```
+
+If you see `app for invoked web endpoint is stopped`, your shell still has `MODAL_API_URL` pointing at the **-dev** serve URL. Either run `modal serve` in `backend/`, or:
+
+```powershell
+Remove-Item Env:MODAL_API_URL -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe scripts\smoke_job_durability.py
+```
 
 ---
 
@@ -347,7 +423,8 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] Production UI uses Modal (footer **Mock mode: off**)
+- [x] Production env: `VITE_USE_MOCK=false`, `VITE_API_URL` = Modal web base (CLI `--force`, May 2026)
+- [ ] Production UI uses Modal (footer **Mock mode: off**) — verify in browser after deploy
 - [ ] Full happy path on production URL
 - [ ] No failed fetch to `localhost` in console
 
@@ -377,17 +454,17 @@ Complete in order. Each **Gate** must pass before the next step.
 
 ### Backend — job store + API
 
-- [ ] `jobs.py` uses `modal.Dict` named `karaoke-jobs`
-- [ ] `orchestrator.py` stub advances all `JobStatus` values including `aligning`
-- [ ] `app.py` exposes `POST /start-job` and `GET /job-status`
+- [x] `jobs.py` uses `modal.Dict` named `karaoke-jobs`
+- [x] `orchestrator.py` stub advances all `JobStatus` values including `aligning`
+- [x] `app.py` exposes `POST /start-job` and `GET /job-status` (via `web.py` + `karaoke_api` ASGI)
 - [ ] `start-job` returns in &lt;2s; work runs in spawned function
-- [ ] CORS allows `automatic-karaoke.vercel.app`, preview `*.vercel.app`, localhost dev ports
-- [ ] `modal deploy app.py` succeeds from `backend/`
+- [x] CORS allows `automatic-karaoke.vercel.app`, preview `*.vercel.app`, localhost dev ports
+- [x] `modal deploy app.py` succeeds from `backend/`
 
 ### Frontend integration
 
 - [ ] `VITE_USE_MOCK=false` documented in `.env.example`
-- [ ] `client.ts` works against deployed Modal base URL
+- [x] `client.ts` works against deployed Modal base URL (`npm run smoke:modal`)
 - [ ] Local `npm run dev` — full happy path with mock **off**
 - [ ] https://automatic-karaoke.vercel.app — full happy path with mock **off**
 

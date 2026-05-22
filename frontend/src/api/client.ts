@@ -33,6 +33,9 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
   const url = new URL(`${API_BASE}/job-status`);
   url.searchParams.set("job_id", jobId);
   const res = await fetch(url.toString());
+  if (res.status === 404) {
+    throw new Error("Job not found");
+  }
   if (!res.ok) {
     throw new Error(`job-status failed: ${res.status} ${res.statusText}`);
   }

@@ -2,7 +2,7 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 1 complete → starting [Phase 2](docs/IMPLEMENTATION_PLAN.md#phase-2--backend-shell-only-modal-no-ml) (Modal API shell). Runbooks: [PHASE_1.md](docs/PHASE_1.md), [PHASE_0.md](docs/PHASE_0.md).
+**Current phase:** Phase 2 — Modal stub API on [Vercel](https://automatic-karaoke.vercel.app) + local dev. Runbooks: [PHASE_2.md](docs/PHASE_2.md), [PHASE_1.md](docs/PHASE_1.md), [PHASE_0.md](docs/PHASE_0.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
@@ -23,16 +23,16 @@ Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (D
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # VITE_USE_MOCK=true for Phase 1
+cp .env.modal .env.local    # Phase 2: real Modal API (or cp .env.example for mock)
 npm run dev
 ```
 
-Open http://localhost:5173 — upload an audio file to run the **mock** job (no GPU, no Modal). Progress advances through separation → transcription → alignment → render; on completion, a sample video plays.
+Upload an audio file — stub pipeline hits **Modal** (`VITE_USE_MOCK=false`) or in-browser mock (`VITE_USE_MOCK=true`).
 
 ```bash
 npm run build
-npm run smoke:mock    # mock API only
-npm run smoke:client  # client.ts via mock (needs .env.local)
+npm run smoke:mock     # mock only
+npm run smoke:modal    # client → deployed Modal API
 ```
 
 ## Python / Modal (Step 4)
@@ -52,16 +52,28 @@ Use **two terminals** for day-to-day dev: one with `cd frontend && npm run dev`,
 
 Optional editor setup: `.vscode/extensions.json`, project context in `AGENTS.md` — see [docs/PHASE_0.md](docs/PHASE_0.md#cursor-and-editor-tooling-optional).
 
-## Vercel (production preview)
+## Vercel (production)
 
 Project: **automatic-karaoke** (root `frontend/`), linked to GitHub `main`.
 
-Required env for Phase 1 mock on Vercel:
+**Phase 2 production env:**
 
-- `VITE_USE_MOCK` = `true` (Production + Preview)
-- `VITE_API_URL` — optional while mock is on; ignored when `VITE_USE_MOCK=true`
+| Variable | Value |
+|----------|--------|
+| `VITE_USE_MOCK` | `false` |
+| `VITE_API_URL` | `https://jacoblum22--karaoke-api.modal.run` |
 
-Live: https://automatic-karaoke.vercel.app
+Live: https://automatic-karaoke.vercel.app — footer should show **Mock mode: off**.
+
+## Modal API (Phase 2)
+
+```powershell
+cd backend
+modal deploy app.py
+# API: https://jacoblum22--karaoke-api.modal.run
+```
+
+Smoke tests (repo root): `scripts/smoke_modal_deployed.py`, `scripts/smoke_job_durability.py`
 
 ## Project phases
 

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { getJobStatus, isMockMode, startJob } from "./api/client";
+import { API_BASE, getJobStatus, isMockMode, startJob } from "./api/client";
 import { ProgressTracker } from "./components/ProgressTracker";
 import { UploadForm } from "./components/UploadForm";
 import { VideoPlayer } from "./components/VideoPlayer";
@@ -60,7 +60,9 @@ function App() {
       <header className="app__header">
         <h1>Automatic Karaoke</h1>
         <p className="app__subtitle">
-          Upload a song — mock pipeline (Phase 1)
+          {isMockMode()
+            ? "Upload a song — mock pipeline (Phase 1)"
+            : "Upload a song — Modal stub API (Phase 2)"}
         </p>
       </header>
 
@@ -93,6 +95,11 @@ function App() {
         <p>
           Mock mode: <code>{isMockMode() ? "on" : "off"}</code>
         </p>
+        {!isMockMode() && (
+          <p>
+            API: <code>{API_BASE}</code>
+          </p>
+        )}
       </footer>
     </main>
   );
