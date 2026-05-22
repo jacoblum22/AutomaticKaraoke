@@ -26,7 +26,7 @@
 
 **Modal API:** https://jacoblum22--karaoke-api.modal.run (`modal deploy` from `backend/`, label `karaoke-api`).
 
-**Next:** [Phase 3 — Demucs in isolation](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation).
+**Next:** [Phase 3 — Demucs in isolation](./PHASE_3.md).
 
 ---
 
@@ -520,7 +520,7 @@ Phase 2 is **complete** (May 2026):
 
 **Known limitation (defer to Phase 6+):** `start-job` blocks on full file upload; no presigned R2 or upload progress % yet.
 
-**Next:** [Phase 3 — Demucs in isolation](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation) — `scripts/test_demucs_local.py` + Modal GPU function; outputs `vocals.wav` + `instrumental.wav`.
+**Next:** [Phase 3 — Demucs in isolation](./PHASE_3.md) — `scripts/test_demucs_local.py` + Modal GPU function; outputs `vocals.wav` + `instrumental.wav`.
 
 ---
 
