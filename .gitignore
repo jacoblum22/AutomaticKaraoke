@@ -15,6 +15,12 @@ dist/
 build/
 scripts/output/*
 !scripts/output/.gitkeep
+# Regenerate with scripts/generate_sample_fixture.py (WAV is large)
+scripts/fixtures/sample_30s.wav
+# Regenerate: test_demucs_local.py then scripts/save_vocal_fixture.py (~5 MB)
+scripts/fixtures/vocals_30s.wav
+# Full songs for local quality tests (user-provided; do not commit commercial tracks)
+scripts/fixtures/Psychosomatic.mp3
 
 # OS / editor
 .DS_Store

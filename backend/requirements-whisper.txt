@@ -1,0 +1,4 @@
+# Phase 4 — Whisper image / local venv (do not add to _BACKEND_IMAGE or _DEMUCS_IMAGE)
+# Note: whisperx pins torch~=2.8. If Demucs breaks, reinstall requirements-demucs.txt.
+faster-whisper>=1.0.0
+whisperx>=3.1.0

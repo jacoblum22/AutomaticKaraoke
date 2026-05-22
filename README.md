@@ -2,13 +2,13 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 2 **complete** — Modal stub API on [Vercel](https://automatic-karaoke.vercel.app) + local dev. **Next:** Phase 3 (Demucs). Runbooks: [PHASE_2.md](docs/PHASE_2.md), [PHASE_1.md](docs/PHASE_1.md), [PHASE_0.md](docs/PHASE_0.md).
+**Current phase:** Phase 4 in progress (Whisper + WhisperX) — Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Live preview:** https://automatic-karaoke.vercel.app
 
-**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md)
+**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md)
 
 **Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
@@ -76,6 +76,28 @@ modal deploy app.py
 
 Smoke tests (repo root): `scripts/smoke_modal_deployed.py`, `scripts/smoke_job_durability.py`
 
+## Demucs (Phase 3) ✓
+
+Install Demucs deps (separate from lean API `requirements.txt`):
+
+```powershell
+pip install -r backend/requirements-demucs.txt
+.\.venv\Scripts\python.exe scripts\test_demucs_local.py
+.\.venv\Scripts\python.exe scripts\save_vocal_fixture.py
+```
+
+Modal GPU separation:
+
+```powershell
+cd backend
+..\.venv\Scripts\modal.exe run app.py::smoke_demucs_separate
+..\.venv\Scripts\modal.exe deploy app.py
+cd ..
+.\.venv\Scripts\python.exe scripts\smoke_demucs_modal.py
+```
+
+Full-song quality (add your own MP3, gitignored): `scripts/copy_psychosomatic_fixture.py` → `scripts/smoke_phase3_step7.py`. Outputs: `scripts/output/psychosomatic/vocals.wav` + `instrumental.wav`. See [PHASE_3.md](docs/PHASE_3.md).
+
 ## Project phases
 
 | Phase | Focus |
@@ -83,7 +105,8 @@ Smoke tests (repo root): `scripts/smoke_modal_deployed.py`, `scripts/smoke_job_d
 | 0 | Repo skeleton, Vite scaffold, stubs |
 | 1 | Frontend + mock job API ✓ |
 | 2 | Modal job endpoints |
-| 3–5 | Demucs, Whisper+WhisperX, FFmpeg (isolated scripts) |
+| 3 | Demucs isolation ✓ |
+| 4–5 | Whisper+WhisperX, FFmpeg (isolated scripts) |
 | 6 | Full pipeline integration |
 | 7 | Hardening (upload, auth, performance) |
 

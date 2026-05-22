@@ -14,12 +14,29 @@ from orchestrator import STUB_VIDEO_URL, run_stub_pipeline as _run_stub_pipeline
 app = modal.App("karaoke")
 
 _BACKEND_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _BACKEND_DIR.parent
+_FIXTURE_MP3 = _REPO_ROOT / "scripts" / "fixtures" / "sample_30s.mp3"
+_PSYCHO_MP3 = _REPO_ROOT / "scripts" / "fixtures" / "Psychosomatic.mp3"
 
 _BACKEND_IMAGE = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install_from_requirements(_BACKEND_DIR / "requirements.txt")
     .add_local_dir(_BACKEND_DIR, remote_path="/root")
 )
+
+# Phase 3 — Demucs only (keep web/API image lean)
+_demucs_image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .apt_install("ffmpeg")
+    .pip_install_from_requirements(_BACKEND_DIR / "requirements-demucs.txt")
+    .add_local_dir(_BACKEND_DIR, remote_path="/root")
+    .add_local_file(_FIXTURE_MP3, remote_path="/fixtures/sample_30s.mp3")
+)
+if _PSYCHO_MP3.is_file():
+    _demucs_image = _demucs_image.add_local_file(
+        _PSYCHO_MP3, remote_path="/fixtures/Psychosomatic.mp3"
+    )
+_DEMUCS_IMAGE = _demucs_image
 
 TERMINAL = frozenset({"done", "failed"})
 POLL_INTERVAL_S = 1
@@ -138,6 +155,98 @@ def smoke_orchestrator_happy() -> str:
     _poll_job(job_id)
     print(f"JOB_ID={job_id}", flush=True)
     return job_id
+
+
+# --- Phase 3 — Demucs GPU ---
+
+
+@app.function(image=_DEMUCS_IMAGE, gpu="T4", timeout=1200)
+def separate_stems(
+    input_path: str,
+    output_dir: str,
+    *,
+    device: str = "cuda",
+) -> tuple[str, str]:
+    """Run Demucs on GPU; returns (vocals_path, instrumental_path)."""
+    from separate import separate_audio
+
+    vocals_path, instrumental_path = separate_audio(
+        input_path,
+        output_dir,
+        device=device,
+        progress=True,
+    )
+    return str(vocals_path), str(instrumental_path)
+
+
+@app.function(image=_DEMUCS_IMAGE, gpu="T4", timeout=600)
+def smoke_demucs_separate() -> dict:
+    """Phase 3 Step 5 — GPU separation on bundled 30s fixture."""
+    import time
+    from pathlib import Path
+
+    from separate import separate_audio
+
+    input_path = Path("/fixtures/sample_30s.mp3")
+    if not input_path.is_file():
+        raise FileNotFoundError(f"fixture missing in image: {input_path}")
+
+    output_dir = Path("/tmp/smoke_demucs_out")
+    t0 = time.perf_counter()
+    vocals_path, instrumental_path = separate_audio(
+        input_path,
+        output_dir,
+        device="cuda",
+        progress=True,
+    )
+    elapsed = time.perf_counter() - t0
+
+    for label, path in ("vocals", vocals_path), ("instrumental", instrumental_path):
+        if not path.is_file() or path.stat().st_size == 0:
+            raise RuntimeError(f"{label} output missing or empty: {path}")
+
+    print(f"VOCALS_PATH={vocals_path}", flush=True)
+    print(f"INSTRUMENTAL_PATH={instrumental_path}", flush=True)
+    print(f"ELAPSED_S={elapsed:.1f}", flush=True)
+    return {
+        "vocals": str(vocals_path),
+        "instrumental": str(instrumental_path),
+        "elapsed_s": elapsed,
+    }
+
+
+@app.function(image=_DEMUCS_IMAGE, gpu="T4", timeout=1200)
+def smoke_demucs_psychosomatic() -> dict:
+    """Phase 3 Step 7 — GPU separation on ~3 min song (if fixture baked into image)."""
+    import time
+    from pathlib import Path
+
+    from separate import separate_audio
+
+    input_path = Path("/fixtures/Psychosomatic.mp3")
+    if not input_path.is_file():
+        raise FileNotFoundError(
+            "Psychosomatic.mp3 not in image — copy to scripts/fixtures/ and redeploy"
+        )
+
+    output_dir = Path("/tmp/smoke_demucs_psychosomatic")
+    t0 = time.perf_counter()
+    vocals_path, instrumental_path = separate_audio(
+        input_path,
+        output_dir,
+        device="cuda",
+        progress=True,
+    )
+    elapsed = time.perf_counter() - t0
+
+    print(f"VOCALS_PATH={vocals_path}", flush=True)
+    print(f"INSTRUMENTAL_PATH={instrumental_path}", flush=True)
+    print(f"ELAPSED_S={elapsed:.1f}", flush=True)
+    return {
+        "vocals": str(vocals_path),
+        "instrumental": str(instrumental_path),
+        "elapsed_s": elapsed,
+    }
 
 
 @app.function(image=_BACKEND_IMAGE)

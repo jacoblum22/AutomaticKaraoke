@@ -1,0 +1,4 @@
+# Phase 3 — Demucs image / local venv only (do not add to _BACKEND_IMAGE)
+demucs>=4.0.0
+torch>=2.0.0
+torchaudio>=2.0.0

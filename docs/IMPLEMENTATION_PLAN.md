@@ -86,7 +86,9 @@ AutomaticKaraoke/
 │   ├── IMPLEMENTATION_PLAN.md          # this file
 │   ├── PHASE_0.md                      # Phase 0 runbook
 │   ├── PHASE_1.md                      # Phase 1 runbook
-│   └── PHASE_2.md                      # Phase 2 runbook
+│   ├── PHASE_2.md                      # Phase 2 runbook
+│   ├── PHASE_3.md                      # Phase 3 runbook (Demucs)
+│   └── PHASE_4.md                      # Phase 4 runbook (Whisper + WhisperX)
 ├── frontend/                           # Phase 0 scaffold → Phase 1 — Vercel
 │   ├── .env.example                    # VITE_API_URL
 │   ├── package.json
@@ -216,101 +218,44 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 ---
 
-### Phase 3 — Demucs in isolation
+### Phase 3 — Demucs in isolation ✓
 
-**Goal:** Given an audio file, produce **both** stems: isolated vocals (for transcription) and instrumental (for the final video). No Whisper, no FFmpeg, no frontend changes required.
+**Detailed runbook:** [PHASE_3.md](./PHASE_3.md) — complete May 2026 (ear-test sign-off on Psychosomatic).
 
-**Local-first (recommended before Modal):**
+**Entry criteria:** [Phase 2](./PHASE_2.md#exit-criteria--phase-3) complete; `scripts/fixtures/sample_30s.mp3` available locally.
 
-```bash
-# scripts/test_demucs_local.py
-# Input: scripts/fixtures/sample_30s.mp3
-# Output: scripts/output/vocals.wav, scripts/output/instrumental.wav
-```
+**Goal:** **vocals.wav** + **instrumental.wav** from mixed audio — local script and Modal GPU function — **no** orchestrator/frontend/R2 changes.
 
-| Setting | Recommendation |
-|---------|----------------|
-| Model | `htdemucs` (fast enough on T4; good enough for karaoke) |
-| Stems | `vocals` + `no_vocals` (instrumental) |
-| Output | 44.1kHz WAV for both stems |
+| Setting | Choice |
+|---------|--------|
+| Model | `htdemucs` |
+| Stems | `vocals` + summed non-vocal stems (instrumental) |
+| Output | 44.1 kHz WAV via stdlib `wave` (no torchcodec) |
+| Modal | `_DEMUCS_IMAGE` on **T4** (separate from lean `_BACKEND_IMAGE`) |
 
-**Modal function (isolated):**
+**Delivered:** `separate.py`, `test_demucs_local.py`, `separate_stems` + smokes, Psychosomatic full-song validation (~315s CPU local / ~12s GPU Modal).
 
-```python
-@app.function(image=demucs_image, gpu="T4", timeout=600)
-def separate_stems(audio_path: str) -> tuple[str, str]:
-    # returns (vocals_path, instrumental_path) on Volume
-```
-
-**Verification checklist**
-
-- [ ] Local script completes on 30s clip (&lt;5 min CPU acceptable locally)
-- [ ] Modal function completes on same clip (&lt;60s on T4)
-- [ ] Vocal stem is intelligible; instrumental has vocals noticeably reduced
-- [ ] Both outputs match input duration (± small padding)
-- [ ] Save `vocals_30s.wav` as fixture for Phase 4
-
-**Exit:** One CLI/script command and one Modal function both produce **vocals + instrumental** from the fixture.
+**Exit:** [PHASE_3 checklist](./PHASE_3.md#phase-3-completion-checklist) ✓; stub orchestrator unchanged.
 
 ---
 
 ### Phase 4 — Transcription + alignment in isolation (faster-whisper → WhisperX)
 
-**Goal:** Given an **isolated vocal stem** (`vocals.wav` from Phase 3 or fixture), output aligned JSON with word-level `start` / `end`. Do **not** use the full mix here — that’s the common mistake that causes bad karaoke sync.
+**Detailed runbook:** [PHASE_4.md](./PHASE_4.md) — `transcribe.py`, `lyrics.json` contract, local CLI, Modal `whisper_image`, eight steps.
 
-**Prerequisite:** Phase 3 exit criteria met (or use committed `fixtures/vocals_30s.wav`).
+**Entry criteria:** [Phase 3](./PHASE_3.md#exit-criteria--phase-4) exit (vocals stem; Demucs ear-test recommended). Inputs: `scripts/fixtures/vocals_30s.wav` and/or `scripts/output/psychosomatic/vocals.wav`.
 
-**Local-first:**
+**Goal:** **`vocals.wav` only** → faster-whisper → WhisperX → **`lyrics.json`** with word-level timestamps. **Not** the full mix.
 
-```bash
-# scripts/test_whisper_local.py
-# Input: scripts/fixtures/vocals_30s.wav  (or scripts/output/vocals.wav)
-# Output: scripts/output/lyrics.json
-```
+| Step | Library | Notes |
+|------|---------|--------|
+| Transcribe | `faster-whisper` | `medium`; `word_timestamps=True`, `vad_filter=True` |
+| Align | `whisperx` | wav2vec2 on same vocal stem |
+| Modal | `_WHISPER_IMAGE` on **T4** | Separate from `_DEMUCS_IMAGE` and `_BACKEND_IMAGE` |
 
-**Two-step chain (same `transcribe.py` module):**
+**Tasks (summary):** whisper deps → `transcribe.py` → local `test_whisper_local.py` → validate JSON → optional full-song run → Modal GPU → deploy smoke → checklist.
 
-```text
-vocals.wav → faster-whisper (text + rough word times) → WhisperX align → lyrics.json
-```
-
-**Output schema (contract for render step):**
-
-```json
-{
-  "segments": [
-    {
-      "start": 12.34,
-      "end": 15.67,
-      "text": "never gonna give you up",
-      "words": [
-        { "word": "never", "start": 12.34, "end": 12.58 },
-        { "word": "gonna", "start": 12.58, "end": 12.90 }
-      ]
-    }
-  ]
-}
-```
-
-| Setting | Recommendation |
-|---------|----------------|
-| Transcribe | `faster-whisper` (CTranslate2), `word_timestamps=True` |
-| Align | `whisperx` + wav2vec2 alignment on the **same** vocal stem |
-| Model | `medium` while prototyping; `large-v3` if quality insufficient |
-| Device | `cuda` on Modal T4; `cpu` + `int8` locally if no GPU |
-| Input audio | **vocals.wav only** |
-
-**Known limitation:** Sung lyrics on dense rap or heavily processed vocals can still drift or mis-hear words; WhisperX improves timing, not transcription. Manual correction UI is v2.
-
-**Verification checklist**
-
-- [ ] JSON validates against schema
-- [ ] Words are non-empty and times monotonic within segments
-- [ ] Spot-check 10 words against **vocals.wav** in a DAW or player (±0.1s acceptable on pop vocals)
-- [ ] Compare with faster-whisper-only output — WhisperX should tighten boundaries, not rewrite lyrics arbitrarily
-- [ ] Modal GPU run completes for 3-min vocal stem
-
-**Exit:** `lyrics.json` generated reliably from vocal fixture and from one full song’s Demucs vocal stem.
+**Exit:** [PHASE_4 checklist](./PHASE_4.md#phase-4-completion-checklist); reliable `lyrics.json` from 30s fixture + optional Psychosomatic vocal stem.
 
 ---
 
@@ -504,8 +449,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 1. ~~**Complete Phase 1**~~ ✓ — [PHASE_1.md](./PHASE_1.md) (mock UI + `VITE_USE_MOCK` on Vercel Production).  
 2. ~~Deploy frontend preview~~ ✓ — https://automatic-karaoke.vercel.app  
 3. ~~**Add real Modal `start-job` / `job-status` + Dict job store (Phase 2)**~~ ✓ — [PHASE_2.md](./PHASE_2.md).  
-4. Add `scripts/fixtures/sample_30s.mp3` and implement `test_demucs_local.py` (Phase 3).  
-5. Implement `test_whisper_local.py` on `vocals.wav` — faster-whisper + WhisperX → `lyrics.json` (Phase 4).  
+4. ~~**Phase 3 — Demucs in isolation**~~ ✓ — [PHASE_3.md](./PHASE_3.md) (Psychosomatic ear-test signed off May 2026).  
+5. **Phase 4 — Transcription + alignment** — [PHASE_4.md](./PHASE_4.md) (Steps 1–2 done; WhisperX + Modal next).  
 6. Add `test_render_local.py` with ASS + FFmpeg (Phase 5).  
 7. Replace stubs with real Modal orchestration: Demucs → transcribe+align → render (Phase 6).
 
@@ -567,4 +512,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 1.6 — Phase 2 complete; [PHASE_2.md](./PHASE_2.md) documents FastAPI ASGI, upload timing, and deviations from original plan.*
+*Document version: 1.9 — Phase 3 Demucs complete; Phase 4 in progress.*
