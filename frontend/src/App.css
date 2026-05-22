@@ -155,6 +155,20 @@
   transition: width 0.3s ease;
 }
 
+.progress-tracker__bar-fill--indeterminate {
+  width: 40%;
+  animation: progress-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
 .progress-tracker__message {
   margin: 0 0 0.75rem;
   font-size: 0.95rem;

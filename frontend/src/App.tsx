@@ -12,14 +12,17 @@ function App() {
   const [jobStatus, setJobStatus] = useState<JobStatusResponse | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const processing =
-    jobId !== null &&
-    jobStatus !== null &&
-    jobStatus.status !== "done" &&
-    jobStatus.status !== "failed";
+    busy ||
+    (jobId !== null &&
+      jobStatus !== null &&
+      jobStatus.status !== "done" &&
+      jobStatus.status !== "failed");
 
   const handleTerminal = useCallback((res: JobStatusResponse) => {
+    setBusy(false);
     if (res.status === "done" && res.video_url) {
       setVideoUrl(res.video_url);
       setJobId(null);
@@ -34,14 +37,36 @@ function App() {
   const handleUpload = async (file: File) => {
     setStartError(null);
     setVideoUrl(null);
-    setJobStatus(null);
+    setBusy(true);
+    // Show progress immediately — startJob blocks until upload + server respond.
+    setJobStatus({
+      job_id: "",
+      status: "queued",
+      progress: 0,
+      message: "Uploading and starting job…",
+    });
 
+    const t0 = performance.now();
     try {
       const { job_id } = await startJob(file);
+      if (import.meta.env.DEV) {
+        console.info(
+          `[timing] start-job: ${(performance.now() - t0).toFixed(0)} ms`,
+          { bytes: file.size, name: file.name }
+        );
+      }
       setJobId(job_id);
+      const t1 = performance.now();
       const initial = await getJobStatus(job_id);
+      if (import.meta.env.DEV) {
+        console.info(
+          `[timing] first job-status: ${(performance.now() - t1).toFixed(0)} ms`
+        );
+      }
       setJobStatus(initial);
     } catch (err) {
+      setBusy(false);
+      setJobStatus(null);
       setStartError(
         err instanceof Error ? err.message : "Could not start processing"
       );
@@ -49,6 +74,7 @@ function App() {
   };
 
   const handleReset = () => {
+    setBusy(false);
     setJobId(null);
     setJobStatus(null);
     setVideoUrl(null);
@@ -80,6 +106,7 @@ function App() {
           progress={jobStatus?.progress}
           message={jobStatus?.message}
           error={jobStatus?.error}
+          indeterminate={busy && (jobStatus?.progress ?? 0) === 0}
         />
 
         <VideoPlayer src={videoUrl} />

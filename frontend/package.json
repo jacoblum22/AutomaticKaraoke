@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "smoke:mock": "npx tsx scripts/smoke-mock.mjs",
     "smoke:client": "npx vite-node --env-file .env.local scripts/smoke-client-run.ts",
-    "smoke:modal": "npx vite-node --env-file .env.modal scripts/smoke-client-modal.ts"
+    "smoke:modal": "npx vite-node --env-file .env.modal scripts/smoke-client-modal.ts",
+    "measure:start-job": "npx vite-node --env-file .env.modal scripts/measure-start-job-timing.ts"
   },
   "dependencies": {
     "react": "^19.2.6",

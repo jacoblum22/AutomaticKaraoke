@@ -17,6 +17,7 @@ python scripts/smoke_modal_deployed.py
 
 # Phase 2 — frontend client.ts against Modal (from frontend/)
 # cd frontend && npm run smoke:modal
+# cd frontend && npm run measure:start-job   # start-job latency vs file size
 
 # Phase 2 — Dict persistence + 404 (many polls; optional mid-job redeploy)
 python scripts/smoke_job_durability.py

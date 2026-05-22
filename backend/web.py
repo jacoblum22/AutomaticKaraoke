@@ -70,12 +70,29 @@ def create_api(
 
     @api.post("/start-job")
     async def start_job(audio: UploadFile = File(...)) -> dict[str, str]:
-        body = await audio.read()
-        _validate_upload(audio.filename or "upload", audio.content_type, len(body))
+        # Validate type from headers; size from Content-Length when present.
+        declared = audio.size or 0
+        _validate_upload(audio.filename or "upload", audio.content_type, declared)
 
         job_id = str(uuid.uuid4())
         create_job(job_id)
         spawn_pipeline(job_id)
+
+        # Phase 2 stub ignores audio bytes; drain in chunks (not one big read).
+        total = 0
+        while True:
+            chunk = await audio.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_UPLOAD_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)",
+                )
+
+        if declared == 0 and total > 0:
+            _validate_upload(audio.filename or "upload", audio.content_type, total)
 
         return {"job_id": job_id}
 

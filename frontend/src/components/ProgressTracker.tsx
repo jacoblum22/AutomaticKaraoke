@@ -14,6 +14,8 @@ type Props = {
   progress?: number;
   message?: string;
   error?: string;
+  /** Pulse bar at 0% while waiting for start-job (upload / cold start). */
+  indeterminate?: boolean;
 };
 
 function stepIndex(status: JobStatus | null): number {
@@ -21,7 +23,13 @@ function stepIndex(status: JobStatus | null): number {
   return STEPS.findIndex((s) => s.status === status);
 }
 
-export function ProgressTracker({ status, progress, message, error }: Props) {
+export function ProgressTracker({
+  status,
+  progress,
+  message,
+  error,
+  indeterminate = false,
+}: Props) {
   if (!status) return null;
 
   const current = stepIndex(status);
@@ -37,8 +45,8 @@ export function ProgressTracker({ status, progress, message, error }: Props) {
         <>
           <div className="progress-tracker__bar" aria-hidden>
             <div
-              className="progress-tracker__bar-fill"
-              style={{ width: `${progress ?? 0}%` }}
+              className={`progress-tracker__bar-fill${indeterminate ? " progress-tracker__bar-fill--indeterminate" : ""}`}
+              style={indeterminate ? undefined : { width: `${progress ?? 0}%` }}
             />
           </div>
           {message && <p className="progress-tracker__message">{message}</p>}

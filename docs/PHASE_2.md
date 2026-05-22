@@ -9,35 +9,37 @@
 
 ### Current progress
 
+**Phase 2 status: complete** (May 2026). All eight steps done; see [completion checklist](#phase-2-completion-checklist) and [what differed from the plan](#what-differed-from-the-plan).
+
 | Status | Steps |
 |--------|--------|
-| Done | **1** `jobs.py` + `modal.Dict` — first testable point ✓ |
-| Done | **2** `orchestrator.py` stub pipeline — second testable point ✓ |
-| Done | **3** HTTP + CORS (`karaoke-api`) — third testable point ✓ |
-| Done | **4** `modal deploy` + smoke on production URL — fourth testable point ✓ |
-| Done | **5** frontend `.env.local` + Modal API — fifth testable point ✓ |
-| Done | **6** job durability + 404 — sixth testable point ✓ |
-| Done | **7** Vercel production env + deploy — seventh testable point ✓ |
-| Done | **8** README + `main` push — Phase 2 code on GitHub ✓ |
+| Done | **1** `jobs.py` + `modal.Dict` |
+| Done | **2** `orchestrator.py` stub pipeline |
+| Done | **3** HTTP + CORS (`karaoke-api` via FastAPI ASGI) |
+| Done | **4** `modal deploy` + production smoke |
+| Done | **5** frontend `.env.modal` + `npm run smoke:modal` |
+| Done | **6** job durability + 404 |
+| Done | **7** Vercel production env (`VITE_USE_MOCK=false`) |
+| Done | **8** README + docs + `main` |
 
-**Frontend (Phase 2):** https://automatic-karaoke.vercel.app — Production `VITE_USE_MOCK=false`, `VITE_API_URL=https://jacoblum22--karaoke-api.modal.run`.
+**Production:** https://automatic-karaoke.vercel.app — `VITE_USE_MOCK=false`, `VITE_API_URL=https://jacoblum22--karaoke-api.modal.run`.
 
-**Modal workspace:** `jacoblum22` (CLI authenticated in Phase 0).
+**Modal API:** https://jacoblum22--karaoke-api.modal.run (`modal deploy` from `backend/`, label `karaoke-api`).
 
-**Next after Phase 2:** [Phase 3 — Demucs in isolation](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation).
+**Next:** [Phase 3 — Demucs in isolation](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation).
 
 ---
 
 ## Entry criteria
 
-Before starting Phase 2:
+Before starting Phase 2 (all satisfied):
 
-- [ ] [Phase 1 exit](./PHASE_1.md#exit-criteria--phase-2) satisfied (completion checklist + local/Vercel mock flow)
-- [ ] `cd frontend && npm run build` passes on `main`
-- [ ] `modal profile current` shows `jacoblum22`
-- [ ] Vercel project **`automatic-karaoke`** only (no second CLI project)
-- [ ] `frontend/src/types/job.ts` unchanged — backend responses must match these types
-- [ ] Phase 1 UI works with `VITE_USE_MOCK=true` (baseline to compare against)
+- [x] [Phase 1 exit](./PHASE_1.md#exit-criteria--phase-2) satisfied
+- [x] `cd frontend && npm run build` passes on `main`
+- [x] `modal profile current` shows `jacoblum22`
+- [x] Vercel project **`automatic-karaoke`** only
+- [x] `frontend/src/types/job.ts` unchanged
+- [x] Phase 1 UI worked with `VITE_USE_MOCK=true` (baseline)
 
 ---
 
@@ -60,7 +62,9 @@ status === "done" → video_url (stable HTTPS test MP4)
 
 **Stub orchestrator:** No GPU. Each stage updates `status`, `progress`, `message` in the Dict. On `done`, set `video_url` to a **stable public test MP4** (see [video URL choice](#video_url-for-phase-2-stub)).
 
-**Audio upload in Phase 2:** Accept the file in `POST /start-job` (validate size/type server-side if easy), optionally write to a Modal Volume path for debugging — **do not** require R2. The stub pipeline does not read the audio bytes.
+**Audio upload in Phase 2:** Accept the file in `POST /start-job` (validate size/type server-side), drain the multipart body in 1 MB chunks (stub does not use bytes). No R2, no Volume write.
+
+**Client UX (post-Phase 2):** Progress UI appears **immediately** on button click (“Uploading and starting job…”). The browser still blocks on `start-job` until the **full file is uploaded** and the server responds — large MP3s can take several seconds before real pipeline stages appear. Dev console: `[timing] start-job` / `first job-status`. Benchmark: `cd frontend && npm run measure:start-job`.
 
 | Approach | Phase 2 | Phase 6+ |
 |----------|---------|----------|
@@ -71,38 +75,55 @@ status === "done" → video_url (stable HTTPS test MP4)
 
 ---
 
-## Target repository tree (Phase 2 changes)
-
-Primary work in **`backend/`**. Small **`frontend/`** env and copy updates only.
+## Target repository tree (as built)
 
 ```text
 backend/
-├── .env.example                 (update) — document Dict name, optional R2 placeholders
-├── requirements.txt             (unchanged) — modal only; no torch/demucs yet
-├── app.py                       (content) — Modal App, `_BACKEND_IMAGE`, smoke fns, `@asgi_app` ✓ Step 3
-├── web.py                       (content) — FastAPI `/start-job`, `/job-status`, CORS ✓ Step 3
-├── jobs.py                      (content) — Dict CRUD, JobRecord shape, helpers ✓ Step 1
-├── orchestrator.py              (content) — stub pipeline (sleep + status updates) ✓ Step 2
-├── storage.py                   (stub) — R2 helpers deferred to Phase 6/7
-├── separate.py                  (stub) — unchanged
-├── transcribe.py                (stub) — unchanged
-└── render.py                    (stub) — unchanged
+├── .env.example
+├── requirements.txt             modal + fastapi[standard] (no ML deps)
+├── app.py                       App "karaoke", _BACKEND_IMAGE, smoke fns, @asgi_app karaoke-api
+├── web.py                       FastAPI create_api(): /start-job, /job-status, CORS
+├── jobs.py                      modal.Dict "karaoke-jobs"
+├── orchestrator.py              run_stub_pipeline (sleep stages, STUB_VIDEO_URL)
+├── storage.py, separate.py, transcribe.py, render.py  (stubs)
 
 frontend/
-├── .env.example                 (update) — VITE_USE_MOCK=false path, VITE_API_URL
-├── .env.local                   (gitignored) — your Modal web base for local dev
+├── .env.example, .env.modal     committed template for Modal API
+├── .env.local                   gitignored
+├── package.json                 smoke:modal, measure:start-job
+├── tsconfig.scripts.json        vite-node scripts (Node types)
+├── scripts/
+│   ├── smoke-client-modal.ts
+│   └── measure-start-job-timing.ts
 └── src/
-    ├── api/client.ts            (verify) — fetch paths already stubbed; test with mock off
-    └── App.tsx                  (optional) — subtitle “Phase 2 — Modal stub API”
+    ├── api/client.ts
+    ├── App.tsx                  optimistic progress + dev timing logs
+    └── components/…             ProgressTracker indeterminate bar during upload
 
 scripts/
-├── smoke_jobs_dict.py           (content) — Step 1 gate: Dict write + read + failed ✓
-├── smoke_orchestrator.py        (content) — Step 2 gate: spawn stub pipeline + poll ✓
-└── smoke_modal_api.py           (content) — Step 3+ gate: HTTP start + poll until done
-
-docs/
-└── PHASE_2.md                     (this file)
+├── smoke_jobs_dict.py
+├── smoke_orchestrator.py
+├── smoke_modal_api.py           --serve (Windows UTF-8 fix)
+├── smoke_modal_deployed.py
+└── smoke_job_durability.py      defaults to production URL
 ```
+
+---
+
+## What differed from the plan
+
+| Topic | Planned | What we built |
+|-------|---------|----------------|
+| HTTP layer | `@modal.web_endpoint` on `app.py` | **FastAPI** in `web.py`, mounted with `@modal.asgi_app(label="karaoke-api")` |
+| `requirements.txt` | modal only | `modal` + **`fastapi[standard]`** |
+| Backend packaging | Implicit mount of entry file | **`_BACKEND_IMAGE`** + `add_local_dir(backend)` so `jobs.py` / `web.py` import in all containers |
+| `start-job` latency | Response in **&lt;2s** (spawn only) | **Spawn is async**, but HTTP **waits for full multipart upload** + drain; cold start adds **3–8+ s** on first request (see `measure:start-job`) |
+| Progress UI | Show after API returns | **Immediate** queued state + indeterminate bar on click; real stages after `start-job` + first poll |
+| Smoke entry | Single `smoke_modal_api.py` | Plus **`smoke_modal_deployed.py`**, **`smoke_job_durability.py`**, **`smoke_jobs_dict.py`**, **`smoke_orchestrator.py`**, frontend **`smoke:modal`** |
+| Step 1 gate | Optional `modal run` | Dedicated **`scripts/smoke_jobs_dict.py`** + `app.py` smoke functions |
+| Dev URL | Documented `-dev` suffix | **`smoke_job_durability`** defaults to **production** URL; unset `MODAL_API_URL` if `-dev` endpoint stopped |
+| Vercel env | Dashboard | CLI `vercel env add … --force` + **`main` push** (Git-linked deploy) |
+| Upload body | `await audio.read()` once | **Spawn job first**, then **drain in 1 MB chunks** (stub ignores bytes) |
 
 **Not created in Phase 2:**
 
@@ -123,7 +144,7 @@ Same shapes as [PHASE_1 API contract](./PHASE_1.md#api-contract-same-as-phase-2)
 ### `POST /start-job`
 
 - **Request:** `multipart/form-data`, field name **`audio`** (matches `client.ts` `FormData.append("audio", file)`).
-- **Response:** `200` + `{ "job_id": "<uuid>" }` within **&lt;2 seconds** (spawn orchestrator asynchronously; do not wait for pipeline).
+- **Response:** `200` + `{ "job_id": "<uuid>" }`. Orchestrator runs in a **spawned** function (pipeline not awaited). The HTTP handler still **waits for the client to finish uploading** the multipart body before responding — so wall-clock time scales with file size and Modal cold start (not a fixed &lt;2s from the browser).
 - **Errors:** `400` invalid file; `413` too large; `500` internal.
 
 ### `GET /job-status?job_id=<uuid>`
@@ -192,16 +213,20 @@ Return appropriate headers for `OPTIONS` preflight.
 - On success: `status="done"`, `progress=100`, `video_url=STUB_VIDEO_URL`
 - Wrap in `try/except` → `set_failed` on unexpected errors
 
-### `backend/app.py`
+### `backend/app.py` + `backend/web.py`
 
-- `app = modal.App("karaoke")` (keep name)
-- `_BACKEND_IMAGE` — `debian_slim` + `requirements.txt` + `add_local_dir(backend)` so `jobs.py` imports work in containers
-- Step 1 smoke: `smoke_jobs_write`, `smoke_jobs_read`, `smoke_jobs_failed` on `_BACKEND_IMAGE`
-- Import `orchestrator`, `jobs` (orchestrator in Step 2)
-- `@modal.web_endpoint(method="POST")` → `start_job`: parse upload, `job_id = uuid4()`, `create_job`, `run_stub_pipeline.spawn(job_id)`, return `{job_id}`
-- `@modal.web_endpoint(method="GET")` → `job_status`: read query `job_id`, return JSON or 404
-- CORS helper or `modal.web_endpoint` CORS kwargs per Modal docs
+- `app = modal.App("karaoke")`
+- `_BACKEND_IMAGE` — `debian_slim` + `pip_install_from_requirements` + **`add_local_dir(backend)`** (required for imports in containers)
+- `run_stub_pipeline` `@app.function` wraps `orchestrator.run_stub_pipeline`
+- `@modal.asgi_app(label="karaoke-api")` → `karaoke_api()` returns `web.create_api(spawn_pipeline=…)`
+- Step 1 smoke: `smoke_jobs_write`, `smoke_jobs_read`, `smoke_jobs_failed`, `smoke_orchestrator_happy`, `smoke_orchestrator_fail`
 - Deploy: `modal deploy app.py` from `backend/`
+
+### `backend/web.py`
+
+- FastAPI routes: `POST /start-job`, `GET /job-status`
+- CORS: production Vercel origin, `allow_origin_regex` for `*.vercel.app`, localhost 5173/5174
+- `start-job`: validate type/size → `create_job` → `spawn_pipeline` → drain upload in chunks → `{ job_id }`
 
 ### `backend/.env.example`
 
@@ -297,7 +322,7 @@ Expect ~20–40s (2× `modal run`; stub pipeline ~8s of sleeps inside the happy 
 
 | # | Action |
 |---|--------|
-| 3.1 | Implement `POST /start-job` and `GET /job-status` in `app.py` |
+| 3.1 | Implement `web.py` (FastAPI) + mount via `@modal.asgi_app` in `app.py` |
 | 3.2 | Wire `start-job` → `create_job` + `run_stub_pipeline.spawn` |
 | 3.3 | Add CORS for Vercel + localhost |
 
@@ -360,9 +385,9 @@ cd ..
 **Gate:**
 
 - [x] `npm run smoke:modal` — client layer against deployed API (no browser CORS)
-- [ ] No CORS errors in browser console (`npm run dev` after copying `.env.modal` → `.env.local`)
-- [ ] Progress stages match stub timing (browser)
-- [ ] `<video>` plays the stub `video_url` (cross-origin MP4 OK)
+- [x] No CORS errors in browser (`npm run dev` + `.env.modal` → `.env.local`)
+- [x] Progress stages match stub timing; **immediate** bar on click (upload phase)
+- [x] `<video>` plays stub `video_url` (`https://automatic-karaoke.vercel.app/sample.mp4`)
 
 **Fifth testable point:** end-to-end in local dev with real Modal API.
 
@@ -423,10 +448,10 @@ Remove-Item Env:MODAL_API_URL -ErrorAction SilentlyContinue
 
 **Gate:**
 
-- [x] Production env: `VITE_USE_MOCK=false`, `VITE_API_URL` = Modal web base (CLI `--force`, May 2026)
-- [ ] Production UI uses Modal (footer **Mock mode: off**) — verify in browser after deploy
-- [ ] Full happy path on production URL
-- [ ] No failed fetch to `localhost` in console
+- [x] Production env: `VITE_USE_MOCK=false`, `VITE_API_URL` = Modal web base
+- [x] Production UI uses Modal (footer **Mock mode: off**)
+- [x] Full happy path on production URL (upload → stub stages → sample MP4)
+- [x] No failed fetch to `localhost` in console
 
 **Do not** create a second Vercel project from `frontend/` CLI ([Phase 0 lesson](./PHASE_0.md#lessons-learned-phase-0-retrospective)).
 
@@ -457,7 +482,7 @@ Remove-Item Env:MODAL_API_URL -ErrorAction SilentlyContinue
 - [x] `jobs.py` uses `modal.Dict` named `karaoke-jobs`
 - [x] `orchestrator.py` stub advances all `JobStatus` values including `aligning`
 - [x] `app.py` exposes `POST /start-job` and `GET /job-status` (via `web.py` + `karaoke_api` ASGI)
-- [x] `start-job` returns in &lt;2s; work runs in spawned function
+- [x] `start-job` spawns pipeline without awaiting it; HTTP waits for upload drain (not &lt;2s for large files — see [deviations](#what-differed-from-the-plan))
 - [x] CORS allows `automatic-karaoke.vercel.app`, preview `*.vercel.app`, localhost dev ports
 - [x] `modal deploy app.py` succeeds from `backend/`
 
@@ -465,32 +490,35 @@ Remove-Item Env:MODAL_API_URL -ErrorAction SilentlyContinue
 
 - [x] `VITE_USE_MOCK=false` documented in `.env.example` / `.env.modal`
 - [x] `client.ts` works against deployed Modal base URL (`npm run smoke:modal`)
-- [ ] Local `npm run dev` — full happy path with mock **off**
-- [ ] https://automatic-karaoke.vercel.app — full happy path with mock **off**
+- [x] Local `npm run dev` — full happy path with mock **off**
+- [x] https://automatic-karaoke.vercel.app — full happy path with mock **off**
 
 ### Verification scripts
 
-- [ ] `scripts/smoke_modal_api.py` passes against deployed URL
-- [ ] Job state readable after container recycle (Step 6)
+- [x] `scripts/smoke_modal_api.py` / `smoke_modal_deployed.py` pass against deployed URL
+- [x] Job state readable after many polls / optional mid-job redeploy (Step 6)
+- [x] `npm run measure:start-job` — upload-size timing baseline
 
-### Explicitly NOT done (confirm)
+### Explicitly NOT done (confirmed)
 
-- [ ] No Demucs / torch in `requirements.txt` or images
-- [ ] No faster-whisper / WhisperX
-- [ ] No FFmpeg render
-- [ ] No R2 upload of user audio or output MP4 (stub URL only)
-- [ ] No presigned upload flow
+- [x] No Demucs / torch in `requirements.txt` or images
+- [x] No faster-whisper / WhisperX
+- [x] No FFmpeg render
+- [x] No R2 upload of user audio or output MP4 (stub URL only)
+- [x] No presigned upload flow
 
 ---
 
 ## Exit criteria → Phase 3
 
-Phase 2 is **complete** when:
+Phase 2 is **complete** (May 2026):
 
-1. [Completion checklist](#phase-2-completion-checklist) required items are checked.
-2. Browser → Modal `start-job` → poll → play **test** `video_url` works on **local** and **Vercel** without mock.
-3. Job state lives in `modal.Dict`, not only in a single container’s RAM.
-4. `separate.py` remains a stub; [Phase 3](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation) adds Demucs in isolation.
+1. [Completion checklist](#phase-2-completion-checklist) — all required items checked.
+2. Browser → Modal `start-job` → poll → play **test** `video_url` on **local** and **Vercel** without mock.
+3. Job state in `modal.Dict` (`karaoke-jobs`), not per-container RAM only.
+4. `separate.py` still a stub — [Phase 3](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation) adds Demucs in isolation.
+
+**Known limitation (defer to Phase 6+):** `start-job` blocks on full file upload; no presigned R2 or upload progress % yet.
 
 **Next:** [Phase 3 — Demucs in isolation](./IMPLEMENTATION_PLAN.md#phase-3--demucs-in-isolation) — `scripts/test_demucs_local.py` + Modal GPU function; outputs `vocals.wav` + `instrumental.wav`.
 
@@ -502,7 +530,9 @@ Phase 2 is **complete** when:
 |---------|-----|
 | CORS blocked on Vercel | Add production origin to Modal endpoint; redeploy |
 | CORS blocked on localhost | Allow `http://localhost:5173` / `5174` |
-| `start-job` hangs &gt;2s | Spawn orchestrator; return `job_id` immediately |
+| UI frozen after click, no bar | Fixed: optimistic `queued` + indeterminate bar; redeploy frontend if old build |
+| `start-job` slow (3–8s+) | Normal: full MP3 upload + Modal cold start; run `npm run measure:start-job` |
+| `start-job` hangs minutes | Check network tab; confirm `VITE_API_URL` is production Modal URL, not stopped `-dev` |
 | `job-status` always `queued` | Check spawn ran; inspect Modal logs for `run_stub_pipeline` |
 | `video_url` 404 in player | Use full HTTPS URL (Vercel `sample.mp4`), not `/sample.mp4` on Modal host |
 | `VITE_*` unchanged on Vercel | Redeploy after env change; rebuild required |
@@ -535,12 +565,17 @@ Ensure `API_BASE` has no trailing slash.
 
 ## Lessons learned (Phase 2 retrospective)
 
-*Fill this table when Phase 2 is done — same format as [PHASE_0](./PHASE_0.md#lessons-learned-phase-0-retrospective).*
-
 | Topic | Planned | What happened | Doc / process fix |
 |-------|---------|---------------|-------------------|
-| | | | |
+| Modal imports | Mount `app.py` only | Only entry file mounted by default → `ImportError` for `jobs` | **`add_local_dir(backend)`** on shared image; document in Phase 2 tree |
+| HTTP on Modal | `web_endpoint` decorators | FastAPI ASGI app cleaner for CORS + two routes | `web.py` + `@asgi_app`; add FastAPI to `requirements.txt` |
+| `start-job` SLA | &lt;2s response | Client waits for **entire upload**; 5 MB ≈ 8s in testing | Don’t promise &lt;2s to browser; spawn async; Phase 6+ presigned upload |
+| Progress UX | Bar after API | Users thought app was broken during upload | Optimistic UI + `measure:start-job`; note in architecture |
+| Smoke / Windows | Print ✓ in subprocess | `charmap` encode error on `smoke_modal_api --serve` | UTF-8 stdio in script; avoid fancy chars in smoke output |
+| Durability smoke | Use `MODAL_API_URL` | Stale **-dev** URL → “endpoint stopped” | Default production URL; document `Remove-Item Env:MODAL_API_URL` |
+| Vercel | Dashboard env only | CLI `--force` + git push both needed | Step 7 lists CLI + `main` push |
+| TS smoke scripts | `tsx` on `client.ts` | `process` not defined under default `tsc` | `tsconfig.scripts.json` + `vite-node` |
 
 ---
 
-*Phase 2 planning doc v1.0 — runbook for Modal shell; ML isolation starts Phase 3.*
+*Phase 2 runbook v2.0 — complete May 2026; Phase 3 adds Demucs.*

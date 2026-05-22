@@ -101,7 +101,7 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
         disabled={disabled || !selected || !!error}
         onClick={onSubmitClick}
       >
-        Create karaoke video
+        {disabled ? "Working…" : "Create karaoke video"}
       </button>
     </div>
   );

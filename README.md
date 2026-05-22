@@ -2,7 +2,7 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 2 — Modal stub API on [Vercel](https://automatic-karaoke.vercel.app) + local dev. Runbooks: [PHASE_2.md](docs/PHASE_2.md), [PHASE_1.md](docs/PHASE_1.md), [PHASE_0.md](docs/PHASE_0.md).
+**Current phase:** Phase 2 **complete** — Modal stub API on [Vercel](https://automatic-karaoke.vercel.app) + local dev. **Next:** Phase 3 (Demucs). Runbooks: [PHASE_2.md](docs/PHASE_2.md), [PHASE_1.md](docs/PHASE_1.md), [PHASE_0.md](docs/PHASE_0.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
@@ -32,7 +32,8 @@ Upload an audio file — stub pipeline hits **Modal** (`VITE_USE_MOCK=false`) or
 ```bash
 npm run build
 npm run smoke:mock     # mock only
-npm run smoke:modal    # client → deployed Modal API
+npm run smoke:modal         # client → deployed Modal API
+npm run measure:start-job   # timing vs upload size (Modal)
 ```
 
 ## Python / Modal (Step 4)

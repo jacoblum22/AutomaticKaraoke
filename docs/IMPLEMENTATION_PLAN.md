@@ -98,9 +98,10 @@ AutomaticKaraoke/
 │           ├── UploadForm.tsx
 │           ├── ProgressTracker.tsx
 │           └── VideoPlayer.tsx
-├── backend/                            # Phase 0: stubs → Phase 2+ — Modal
+├── backend/                            # Phase 2: Modal API shell (FastAPI ASGI)
 │   ├── .env.example
-│   ├── requirements.txt                # Phase 0: modal only (heavy deps later)
+│   ├── requirements.txt                # modal + fastapi[standard]; ML deps Phase 3+
+│   ├── web.py, orchestrator.py, jobs.py
 │   ├── app.py
 │   ├── jobs.py
 │   ├── separate.py                     # Phase 3: Demucs
@@ -115,7 +116,7 @@ AutomaticKaraoke/
     └── test_render_local.py            # Phase 5
 ```
 
-**Added after Phase 0 (not in bootstrap):** `scripts/fixtures/sample_30s.mp3`, `scripts/fixtures/vocals_30s.wav`, `scripts/test_render_local.py`, mock API / MSW (Phase 1), Modal web endpoints (Phase 2).
+**Added after Phase 0 (not in bootstrap):** `scripts/fixtures/sample_30s.mp3`, `scripts/fixtures/vocals_30s.wav`, `scripts/test_render_local.py`, in-browser mock API (Phase 1), Modal FastAPI + smoke scripts (Phase 2), `frontend/.env.modal`, `npm run smoke:modal` / `measure:start-job`.
 
 ---
 
@@ -179,25 +180,39 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 ---
 
-### Phase 2 — Backend shell only (Modal, no ML)
+### Phase 2 — Backend shell only (Modal, no ML) ✓
 
-**Detailed runbook:** [PHASE_2.md](./PHASE_2.md) — job store, stub orchestrator, web endpoints, deploy, frontend env switch, eight steps.
+**Detailed runbook:** [PHASE_2.md](./PHASE_2.md) — **complete** (May 2026). Eight steps; retrospective: [§ What differed](./PHASE_2.md#what-differed-from-the-plan).
+
+**Status:** Production https://automatic-karaoke.vercel.app uses Modal API (`VITE_USE_MOCK=false`). API: `https://jacoblum22--karaoke-api.modal.run`.
 
 **Entry criteria:** [Phase 1](./PHASE_1.md#exit-criteria--phase-2) complete; Modal CLI authenticated; Vercel **`automatic-karaoke`** only.
 
 **Goal:** Real HTTP endpoints and durable job lifecycle; pipeline steps are **stubs** that sleep and return a stable test `video_url` — **no** Demucs/Whisper/FFmpeg.
 
+**Key decisions (as built):**
+
+| Topic | Choice |
+|-------|--------|
+| HTTP | FastAPI in `backend/web.py`, `@modal.asgi_app(label="karaoke-api")` |
+| Packaging | `_BACKEND_IMAGE` + `add_local_dir(backend)` for all Python modules |
+| Job store | `modal.Dict` `karaoke-jobs` |
+| Stub video | `https://automatic-karaoke.vercel.app/sample.mp4` |
+| `start-job` | Spawn orchestrator async; HTTP waits for **full multipart upload** (not &lt;2s for large files) |
+| Frontend UX | Optimistic progress on click; `npm run measure:start-job` for timing |
+| Smoke | `scripts/smoke_*.py`, `npm run smoke:modal`, durability script defaults to production URL |
+
 | Endpoint | Implementation |
 |----------|----------------|
-| `POST /start-job` | Persist job in `modal.Dict`; spawn orchestrator stub; return `{ job_id }` in &lt;2s |
-| `GET /job-status` | Read job from `modal.Dict` (`karaoke-jobs`) |
-| Orchestrator stub | Sleep ~2s per stage; set `video_url` to HTTPS test MP4 (e.g. Vercel `/sample.mp4`) |
+| `POST /start-job` | `create_job` + `spawn` stub; validate type/size; drain upload in chunks; return `{ job_id }` |
+| `GET /job-status` | Read `modal.Dict` (`karaoke-jobs`); 404 if missing |
+| Orchestrator stub | ~2s per stage; `video_url` = Vercel `sample.mp4` |
 
 **Storage (Phase 2):** `modal.Dict` only. R2 and Volume artifacts deferred to Phase 6+.
 
-**Tasks (summary):** `jobs.py` → `orchestrator.py` stub → `app.py` endpoints + CORS → `modal deploy` → frontend `VITE_USE_MOCK=false` → Vercel env → smoke script + checklist.
+**Tasks (summary):** `jobs.py` → `orchestrator.py` → `web.py` + ASGI → `modal deploy` → frontend env + optimistic UI → Vercel production env → smoke scripts + checklist.
 
-**Exit:** [PHASE_2 checklist](./PHASE_2.md#phase-2-completion-checklist); browser → Modal → poll → test video on local + Vercel; no ML installs.
+**Exit:** [PHASE_2 checklist](./PHASE_2.md#phase-2-completion-checklist) complete; local + Vercel happy path without mock; no ML in `requirements.txt`.
 
 ---
 
@@ -488,7 +503,7 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 0. ~~**Complete Phase 0**~~ ✓ — see [PHASE_0 retrospective](./PHASE_0.md#lessons-learned-phase-0-retrospective).  
 1. ~~**Complete Phase 1**~~ ✓ — [PHASE_1.md](./PHASE_1.md) (mock UI + `VITE_USE_MOCK` on Vercel Production).  
 2. ~~Deploy frontend preview~~ ✓ — https://automatic-karaoke.vercel.app  
-3. **Add real Modal `start-job` / `job-status` + Dict job store (Phase 2).**  
+3. ~~**Add real Modal `start-job` / `job-status` + Dict job store (Phase 2)**~~ ✓ — [PHASE_2.md](./PHASE_2.md).  
 4. Add `scripts/fixtures/sample_30s.mp3` and implement `test_demucs_local.py` (Phase 3).  
 5. Implement `test_whisper_local.py` on `vocals.wav` — faster-whisper + WhisperX → `lyrics.json` (Phase 4).  
 6. Add `test_render_local.py` with ASS + FFmpeg (Phase 5).  
@@ -526,7 +541,8 @@ result = whisperx.align(segments, align_model, metadata, audio, device="cuda")
 
 **Vercel**
 
-- `VITE_API_URL`
+- `VITE_API_URL` — Modal web base (no trailing slash); required when `VITE_USE_MOCK=false`
+- `VITE_USE_MOCK` — `false` in production (Phase 2+); `true` for Phase 1-only mock
 
 **Modal secrets**
 
@@ -551,4 +567,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 1.5 — adds [PHASE_1.md](./PHASE_1.md) runbook; Phase 1 summary points to in-browser mock.*
+*Document version: 1.6 — Phase 2 complete; [PHASE_2.md](./PHASE_2.md) documents FastAPI ASGI, upload timing, and deviations from original plan.*
