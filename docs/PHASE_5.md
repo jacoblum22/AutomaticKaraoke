@@ -20,7 +20,7 @@
 | Done | **7** Deployed render smoke + API regression — seventh testable point ✓ |
 | Done | **8** Docs + sign-off — Phase 5 complete ✓ |
 
-**Status:** Phase 5 **complete** (May 2026). Next: [Phase 6](./IMPLEMENTATION_PLAN.md#phase-6--integrate-ml-into-backend-still-no-full-ui-polish).
+**Status:** Phase 5 **complete** (May 2026). Next: [Phase 6](./PHASE_6.md).
 
 **Production API (unchanged):** https://automatic-karaoke.vercel.app — Phase 2 **stub** orchestrator until Phase 6.
 
@@ -33,7 +33,7 @@
 | Full-song lyrics | `scripts/output/psychosomatic/lyrics.json` (Phase 4 Step 5) |
 | Full-song instrumental | `scripts/output/psychosomatic/instrumental.wav` (Phase 3 Step 7) |
 
-**Next after Phase 5:** [Phase 6 — Integrate ML into backend](./IMPLEMENTATION_PLAN.md#phase-6--integrate-ml-into-backend-still-no-full-ui-polish) — real orchestrator calls separate → transcribe → render.
+**Next after Phase 5:** [Phase 6 — Integrate ML pipeline](./PHASE_6.md).
 
 ---
 
@@ -447,7 +447,7 @@ cd backend
 
 ## Phase 5 completion checklist
 
-**All required boxes** must be checked before [Phase 6](./IMPLEMENTATION_PLAN.md#phase-6--integrate-ml-into-backend-still-no-full-ui-polish).
+**All required boxes** must be checked before [Phase 6](./PHASE_6.md).
 
 ### Local
 
@@ -487,7 +487,7 @@ Phase 5 is **complete** when:
 3. Optional but recommended: **`psychosomatic/karaoke.mp4`** for demo quality.
 4. Modal CPU render smoke passes on deployed app; stub API unchanged.
 
-**Next:** [Phase 6 — Integrate ML into backend](./IMPLEMENTATION_PLAN.md#phase-6--integrate-ml-into-backend-still-no-full-ui-polish) — orchestrator calls `separate` → `transcribe_and_align` → `render_karaoke` → upload URL.
+**Next:** [Phase 6 — Integrate ML pipeline](./PHASE_6.md).
 
 ---
 

@@ -2,13 +2,13 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 6 (integrate ML pipeline) — Phase 5 FFmpeg render ✓, Phase 4 Whisper ✓, Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md).
+**Current phase:** Phase 6 (integrate ML pipeline) — Phase 5 FFmpeg render ✓, Phase 4 Whisper ✓, Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Live preview:** https://automatic-karaoke.vercel.app
 
-**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md)
+**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md)
 
 **Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
@@ -131,6 +131,12 @@ Manual render:
 ```
 
 Bakes `psychosomatic/instrumental.wav` + `lyrics.json` into `_RENDER_IMAGE` at deploy. Stub orchestrator still returns `sample.mp4` until Phase 6. See [PHASE_5.md](docs/PHASE_5.md).
+
+## Pipeline integration (Phase 6)
+
+Runbook: [PHASE_6.md](docs/PHASE_6.md) — wire Demucs → transcribe → render → R2, replace stub orchestrator, E2E API smoke.
+
+Prerequisites: R2 bucket + Modal secret; fix `start-job` to save upload before spawn.
 
 ## Project phases
 

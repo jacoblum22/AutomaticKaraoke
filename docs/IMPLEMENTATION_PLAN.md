@@ -89,7 +89,8 @@ AutomaticKaraoke/
 │   ├── PHASE_2.md                      # Phase 2 runbook
 │   ├── PHASE_3.md                      # Phase 3 runbook (Demucs)
 │   ├── PHASE_4.md                      # Phase 4 runbook (Whisper + WhisperX)
-│   └── PHASE_5.md                      # Phase 5 runbook (FFmpeg + ASS)
+│   ├── PHASE_5.md                      # Phase 5 runbook (FFmpeg + ASS)
+│   └── PHASE_6.md                      # Phase 6 runbook (pipeline integration)
 ├── frontend/                           # Phase 0 scaffold → Phase 1 — Vercel
 │   ├── .env.example                    # VITE_API_URL
 │   ├── package.json
@@ -283,6 +284,10 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 ### Phase 6 — Integrate ML into backend (still no full UI polish)
 
+**Detailed runbook:** [PHASE_6.md](./PHASE_6.md) — Volume per job, real orchestrator, R2 `video_url`, E2E API smoke.
+
+**Entry criteria:** [Phase 5](./PHASE_5.md#exit-criteria--phase-7) exit; R2 bucket + Modal secret ready.
+
 Wire real functions into the orchestrator from Phase 2:
 
 ```text
@@ -307,7 +312,7 @@ start-job
 - [ ] Total time &lt; 90s on T4 for 3-min song (before warm containers)
 - [ ] Failed Demucs does not leave orphan “done” status
 
-**Exit:** `POST /start-job` with real audio returns a real karaoke MP4 URL.
+**Exit:** [PHASE_6 checklist](./PHASE_6.md#phase-6-completion-checklist); `POST /start-job` returns real karaoke MP4 URL.
 
 ---
 
@@ -457,7 +462,7 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 4. ~~**Phase 3 — Demucs in isolation**~~ ✓ — [PHASE_3.md](./PHASE_3.md) (Psychosomatic ear-test signed off May 2026).  
 5. ~~**Phase 4 — Transcription + alignment**~~ ✓ — [PHASE_4.md](./PHASE_4.md).  
 6. ~~**Phase 5 — FFmpeg + ASS render**~~ ✓ — [PHASE_5.md](./PHASE_5.md) (Psychosomatic `karaoke.mp4` signed off May 2026).  
-7. **Phase 6 — Integrate ML into backend** — [PHASE_5.md](./PHASE_5.md#exit-criteria--phase-6) → real orchestrator: Demucs → transcribe+align → render.
+7. **Phase 6 — Integrate ML into backend** — [PHASE_6.md](./PHASE_6.md).
 
 ---
 
@@ -517,4 +522,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 2.2 — Phase 5 FFmpeg + ASS render complete; Phase 6 integration next.*
+*Document version: 2.3 — adds [PHASE_6.md](./PHASE_6.md) pipeline integration runbook.*
