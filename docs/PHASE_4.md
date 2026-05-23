@@ -115,7 +115,7 @@ Optional metadata (v1): top-level `"language": "en"` if detected.
 | Step | Library | Setting | Notes |
 |------|---------|---------|--------|
 | Transcribe | `faster-whisper` | `medium` | Upgrade to `large-v3` if lyrics wrong |
-| Transcribe | | `word_timestamps=True`, `vad_filter=True` | On **vocals.wav** path |
+| Transcribe | | `word_timestamps=True`, `vad_filter=False` | On **vocals.wav** path |
 | Transcribe | | `device=cuda`, `compute_type=float16` | Modal T4 |
 | Transcribe | | `device=cpu`, `compute_type=int8` | Local without GPU |
 | Align | `whisperx` | wav2vec2 align model | Same vocal stem + transcript |
@@ -463,7 +463,7 @@ Phase 4 is **complete** when:
 3. Optional: `psychosomatic/lyrics.json` from full-song vocal stem validates.
 4. Phase 2/3 production paths still work (stub API + Demucs unchanged).
 
-**Next:** [Phase 5 — FFmpeg + ASS render](./IMPLEMENTATION_PLAN.md#phase-5--ffmpeg--ass-render-in-isolation) — `lyrics.json` + `instrumental.wav` → `karaoke.mp4`.
+**Next:** [Phase 5 — FFmpeg + ASS render](./PHASE_5.md) — `lyrics.json` + `instrumental.wav` → `karaoke.mp4`.
 
 ---
 
@@ -471,7 +471,7 @@ Phase 4 is **complete** when:
 
 | Problem | Fix |
 |---------|-----|
-| Empty `segments` | Check input is **vocals** stem; try `vad_filter=True`; verify Demucs quality |
+| Empty `segments` | Check input is **vocals** stem; verify Demucs quality |
 | CUDA OOM on Modal | Shorter clip; `medium` not `large-v3`; T4 not CPU |
 | torch version conflict with Demucs | Pin torch in both requirements files or split venvs |
 | WhisperX align fails | Match `language_code` to audio; check segment shape for WhisperX API version |
@@ -514,7 +514,7 @@ from faster_whisper import WhisperModel
 import whisperx
 
 model = WhisperModel("medium", device="cuda", compute_type="float16")
-segments, _ = model.transcribe("vocals.wav", word_timestamps=True, vad_filter=True)
+segments, _ = model.transcribe("vocals.wav", word_timestamps=True, vad_filter=False)
 
 audio = whisperx.load_audio("vocals.wav")
 align_model, metadata = whisperx.load_align_model(language_code="en", device="cuda")

@@ -1,0 +1,3 @@
+# Phase 5 — render image / local toolchain (no pip ML deps)
+# FFmpeg must be on PATH (local) or apt_install ffmpeg (Modal _RENDER_IMAGE).
+# Optional: ffmpeg-python>=0.2.0  # not required for v1 (stdlib subprocess)

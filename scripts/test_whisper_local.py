@@ -165,6 +165,15 @@ def main() -> int:
         lyrics = json.loads(out_path.read_text(encoding="utf-8"))
     except TranscriptionError as e:
         print(f"ERROR: {e}", file=sys.stderr)
+        err = str(e).lower()
+        if "incompleteread" in err or "connection broken" in err:
+            print(
+                "hint: HuggingFace model download was interrupted. Run:\n"
+                f"  python scripts/download_whisper_model.py --model {args.model}\n"
+                "then re-run this script. Or use Modal GPU: "
+                "scripts/smoke_phase4_step5.py",
+                file=sys.stderr,
+            )
         return 1
 
     elapsed = time.perf_counter() - t0

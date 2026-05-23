@@ -27,3 +27,9 @@ pip install -r backend/requirements-whisper.txt
 ```
 
 **Phase 4:** `vocals_30s.wav` from the tone-only `sample_30s` fixture has no lyrics for Whisper. Use vocals from a real song (e.g. `scripts/output/psychosomatic/vocals.wav`) or overwrite `vocals_30s.wav` with a 30s clip from real Demucs output.
+
+**Phase 5:** Render inputs live under `scripts/output/` — pair `instrumental.wav` + `lyrics.json` (see [PHASE_5.md](../../docs/PHASE_5.md)). Psychosomatic full-song pair recommended for QA.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step1.py
+```

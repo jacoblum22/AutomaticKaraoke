@@ -25,6 +25,18 @@ python scripts/smoke_whisper_modal.py --deploy
 python scripts/smoke_phase4_step5.py
 python scripts/smoke_phase4_step5.py --local
 
+# Phase 5 Step 1 — FFmpeg on PATH (install separately; not a pip package)
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step1.py
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step2.py
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step3.py
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step4.py
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step5.py
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step6.py
+.\.venv\Scripts\python.exe scripts\smoke_render_modal.py --deploy
+.\.venv\Scripts\python.exe scripts\test_render_local.py --clip-end 30
+.\.venv\Scripts\python.exe scripts\test_render_local.py --no-clip `
+  --output scripts\output\psychosomatic\karaoke.mp4
+
 # Phase 3 Step 1 — fixture + demucs/torch in venv
 python scripts/generate_sample_fixture.py
 pip install -r backend/requirements-demucs.txt

@@ -18,6 +18,8 @@ _REPO_ROOT = _BACKEND_DIR.parent
 _FIXTURE_MP3 = _REPO_ROOT / "scripts" / "fixtures" / "sample_30s.mp3"
 _PSYCHO_MP3 = _REPO_ROOT / "scripts" / "fixtures" / "Psychosomatic.mp3"
 _VOCAL_SMOKE_WAV = _REPO_ROOT / "scripts" / "output" / "psychosomatic" / "vocals.wav"
+_PSYCHO_INSTRUMENTAL = _REPO_ROOT / "scripts" / "output" / "psychosomatic" / "instrumental.wav"
+_PSYCHO_LYRICS = _REPO_ROOT / "scripts" / "output" / "psychosomatic" / "lyrics.json"
 
 _BACKEND_IMAGE = (
     modal.Image.debian_slim(python_version="3.12")
@@ -51,6 +53,19 @@ if _VOCAL_SMOKE_WAV.is_file():
         _VOCAL_SMOKE_WAV, remote_path="/fixtures/vocals_smoke.wav"
     )
 _WHISPER_IMAGE = _whisper_image
+
+# Phase 5 — FFmpeg render (CPU only; no torch / whisper)
+_render_image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .apt_install("ffmpeg")
+    .pip_install_from_requirements(_BACKEND_DIR / "requirements-render.txt")
+    .add_local_dir(_BACKEND_DIR, remote_path="/root")
+)
+if _PSYCHO_INSTRUMENTAL.is_file() and _PSYCHO_LYRICS.is_file():
+    _render_image = _render_image.add_local_file(
+        _PSYCHO_INSTRUMENTAL, remote_path="/fixtures/instrumental_smoke.wav"
+    ).add_local_file(_PSYCHO_LYRICS, remote_path="/fixtures/lyrics_smoke.json")
+_RENDER_IMAGE = _render_image
 
 TERMINAL = frozenset({"done", "failed"})
 POLL_INTERVAL_S = 1
@@ -291,7 +306,11 @@ def transcribe_vocals_modal(
 
 
 @app.function(image=_WHISPER_IMAGE, gpu="T4", timeout=1200)
-def smoke_whisper_fixture(*, clip_end: float | None = 30.0) -> dict:
+def smoke_whisper_fixture(
+    *,
+    clip_end: float | None = 30.0,
+    model_size: str = "medium",
+) -> dict:
     """GPU transcribe+align on bundled vocal stem.
 
     Default ``clip_end=30`` for smokes; pass ``clip_end=None`` for full song (Step 5).
@@ -314,6 +333,7 @@ def smoke_whisper_fixture(*, clip_end: float | None = 30.0) -> dict:
     transcribe_and_align(
         vocal,
         output,
+        model_size=model_size,
         device="cuda",
         compute_type="float16",
         clip_end=clip_end,
@@ -343,6 +363,69 @@ def smoke_whisper_fixture(*, clip_end: float | None = 30.0) -> dict:
         "last_word": all_words[-1]["word"],
         "last_end": all_words[-1]["end"],
         "lyrics": lyrics,
+    }
+
+
+# --- Phase 5 — FFmpeg render CPU ---
+
+
+@app.function(image=_RENDER_IMAGE, timeout=600)
+def render_karaoke_modal(
+    instrumental_path: str,
+    lyrics_path: str,
+    output_mp4: str,
+    *,
+    clip_end: float | None = None,
+) -> str:
+    """Render karaoke MP4 on CPU; returns path to output file."""
+    from render import render_karaoke
+
+    out = render_karaoke(
+        instrumental_path,
+        lyrics_path,
+        output_mp4,
+        clip_end=clip_end,
+    )
+    return str(out)
+
+
+@app.function(image=_RENDER_IMAGE, timeout=1200)
+def smoke_render_fixture(*, clip_end: float | None = 30.0) -> dict:
+    """CPU render on bundled psychosomatic pair.
+
+    Default ``clip_end=30`` for smokes; pass ``clip_end=None`` for full song.
+    """
+    import time
+    from pathlib import Path
+
+    from render import render_karaoke
+
+    instrumental = Path("/fixtures/instrumental_smoke.wav")
+    lyrics = Path("/fixtures/lyrics_smoke.json")
+    if not instrumental.is_file() or not lyrics.is_file():
+        raise FileNotFoundError(
+            "render fixtures missing from image — run Phase 3–4 on Psychosomatic and redeploy "
+            "(expects scripts/output/psychosomatic/instrumental.wav + lyrics.json)"
+        )
+
+    output = Path("/tmp/karaoke_smoke.mp4")
+    t0 = time.perf_counter()
+    render_karaoke(instrumental, lyrics, output, clip_end=clip_end)
+    elapsed = time.perf_counter() - t0
+
+    if not output.is_file() or output.stat().st_size == 0:
+        raise RuntimeError(f"render produced missing or empty MP4: {output}")
+
+    size_bytes = output.stat().st_size
+    print(f"MP4_PATH={output}", flush=True)
+    print(f"ELAPSED_S={elapsed:.1f}", flush=True)
+    print(f"SIZE_BYTES={size_bytes}", flush=True)
+
+    return {
+        "mp4_path": str(output),
+        "elapsed_s": elapsed,
+        "size_bytes": size_bytes,
+        "clip_end": clip_end,
     }
 
 

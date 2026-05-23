@@ -35,15 +35,18 @@ def run_deploy() -> None:
         raise SystemExit(proc.returncode)
 
 
-def run_modal_full_song() -> dict:
+def run_modal_full_song(*, model_size: str = "medium") -> dict:
     import modal
 
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     from validate_lyrics_json import validate_lyrics  # noqa: E402
 
-    print(f"Modal: {MODAL_APP}::{SMOKE_FN}(clip_end=None) — full bundled vocal stem")
+    print(
+        f"Modal: {MODAL_APP}::{SMOKE_FN}(clip_end=None, model_size={model_size!r}) "
+        "— full bundled vocal stem"
+    )
     fn = modal.Function.from_name(MODAL_APP, SMOKE_FN)
-    result = fn.remote(clip_end=None)
+    result = fn.remote(clip_end=None, model_size=model_size)
     if not isinstance(result, dict):
         raise RuntimeError(f"unexpected return: {type(result)}")
 
@@ -68,7 +71,7 @@ def run_modal_full_song() -> dict:
     return result
 
 
-def run_local_full_song() -> int:
+def run_local_full_song(*, model_size: str = "medium") -> int:
     py = sys.executable
     test = REPO_ROOT / "scripts" / "test_whisper_local.py"
     validate = REPO_ROOT / "scripts" / "validate_lyrics_json.py"
@@ -81,6 +84,8 @@ def run_local_full_song() -> int:
             "--output",
             str(OUTPUT),
             "--no-clip",
+            "--model",
+            model_size,
         ],
         cwd=REPO_ROOT,
         check=False,
@@ -103,6 +108,11 @@ def main() -> int:
         action="store_true",
         help="modal deploy before GPU run",
     )
+    parser.add_argument(
+        "--model",
+        default="medium",
+        help="faster-whisper model size (e.g. large-v3)",
+    )
     args = parser.parse_args()
 
     if not VOCAL.is_file():
@@ -114,13 +124,13 @@ def main() -> int:
         run_deploy()
 
     if args.local:
-        print("=== local full song (CPU, may take 15–30+ min) ===")
-        code = run_local_full_song()
+        print(f"=== local full song (CPU, model={args.model}) ===")
+        code = run_local_full_song(model_size=args.model)
         if code != 0:
             return code
     else:
-        print("=== Modal GPU full song ===")
-        run_modal_full_song()
+        print(f"=== Modal GPU full song (model={args.model}) ===")
+        run_modal_full_song(model_size=args.model)
 
     print("Phase 4 Step 5 OK")
     return 0

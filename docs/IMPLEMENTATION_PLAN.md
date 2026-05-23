@@ -88,7 +88,8 @@ AutomaticKaraoke/
 │   ├── PHASE_1.md                      # Phase 1 runbook
 │   ├── PHASE_2.md                      # Phase 2 runbook
 │   ├── PHASE_3.md                      # Phase 3 runbook (Demucs)
-│   └── PHASE_4.md                      # Phase 4 runbook (Whisper + WhisperX)
+│   ├── PHASE_4.md                      # Phase 4 runbook (Whisper + WhisperX)
+│   └── PHASE_5.md                      # Phase 5 runbook (FFmpeg + ASS)
 ├── frontend/                           # Phase 0 scaffold → Phase 1 — Vercel
 │   ├── .env.example                    # VITE_API_URL
 │   ├── package.json
@@ -258,20 +259,25 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 ---
 
-### Phase 5 — FFmpeg + ASS render in isolation
+### Phase 5 — FFmpeg + ASS render in isolation ✓
 
-**Goal:** Combine **precomputed** `lyrics.json` + instrumental WAV → MP4. No Demucs/Whisper in this step.
+**Detailed runbook:** [PHASE_5.md](./PHASE_5.md) — `render.py`, ASS karaoke tags, local CLI, Modal `_RENDER_IMAGE` (CPU), eight steps.
 
-**Dependencies:** FFmpeg in image; Python generates `.ass` from word timestamps (karaoke `\k` tags or per-word highlight).
+**Entry criteria:** [Phase 4](./PHASE_4.md#exit-criteria--phase-5) exit; paired `lyrics.json` + `instrumental.wav` (Psychosomatic outputs recommended for QA).
 
-**Verification checklist**
+**Goal:** **Precomputed** `lyrics.json` + **`instrumental.wav`** → **`karaoke.mp4`** with word-by-word highlight. No Demucs/Whisper in this step.
 
-- [ ] ASS displays synced lyrics on instrumental
-- [ ] Highlight advances word-by-word (basic karaoke style)
-- [ ] MP4 plays in browser and VLC
-- [ ] 30s clip renders in &lt;30s on CPU
+| Delivered | Notes |
+|-----------|--------|
+| `render.py` | `lyrics_to_ass`, `render_karaoke`, `filter_lyrics_to_clip` |
+| Local CLI | `test_render_local.py` (`--no-clip`, `--validate`) |
+| Smokes | `smoke_phase5_step1`–`step6`, `smoke_render_modal.py` |
+| Modal | `_RENDER_IMAGE`, `render_karaoke_modal`, `smoke_render_fixture` |
+| Outputs | `scripts/output/karaoke.mp4` (30s); `psychosomatic/karaoke.mp4` (~194s) |
 
-**Exit:** `scripts/test_render_local.py` takes `lyrics.json` + instrumental.wav → `karaoke.mp4`.
+**Runtime (reference):** local CPU ~10s / 30s clip, ~30–55s full song; Modal CPU ~4s warm / 30s clip.
+
+**Exit:** [PHASE_5 checklist](./PHASE_5.md#phase-5-completion-checklist) ✓; stub API unchanged.
 
 ---
 
@@ -450,8 +456,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 3. ~~**Add real Modal `start-job` / `job-status` + Dict job store (Phase 2)**~~ ✓ — [PHASE_2.md](./PHASE_2.md).  
 4. ~~**Phase 3 — Demucs in isolation**~~ ✓ — [PHASE_3.md](./PHASE_3.md) (Psychosomatic ear-test signed off May 2026).  
 5. ~~**Phase 4 — Transcription + alignment**~~ ✓ — [PHASE_4.md](./PHASE_4.md).  
-6. **Phase 5 — FFmpeg + ASS render** — `test_render_local.py`, `lyrics.json` + `instrumental.wav` → MP4.  
-7. Replace stubs with real Modal orchestration: Demucs → transcribe+align → render (Phase 6).
+6. ~~**Phase 5 — FFmpeg + ASS render**~~ ✓ — [PHASE_5.md](./PHASE_5.md) (Psychosomatic `karaoke.mp4` signed off May 2026).  
+7. **Phase 6 — Integrate ML into backend** — [PHASE_5.md](./PHASE_5.md#exit-criteria--phase-6) → real orchestrator: Demucs → transcribe+align → render.
 
 ---
 
@@ -463,7 +469,7 @@ from faster_whisper import WhisperModel
 import whisperx
 
 model = WhisperModel("medium", device="cuda", compute_type="float16")
-segments, _ = model.transcribe("vocals.wav", word_timestamps=True, vad_filter=True)
+segments, _ = model.transcribe("vocals.wav", word_timestamps=True, vad_filter=False)
 
 # Build segment list for WhisperX (see whisperx docs for exact segment shape)
 audio = whisperx.load_audio("vocals.wav")
@@ -511,4 +517,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 2.0 — Phase 4 transcription complete; Phase 5 render next.*
+*Document version: 2.2 — Phase 5 FFmpeg + ASS render complete; Phase 6 integration next.*

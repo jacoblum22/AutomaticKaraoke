@@ -14,6 +14,7 @@ import torch as th
 
 DEFAULT_MODEL_SIZE = "medium"
 DEFAULT_LANGUAGE = "en"
+DEFAULT_VAD_FILTER = False
 SEGMENT_TIME_TOLERANCE_S = 0.15
 
 
@@ -85,6 +86,7 @@ def transcribe_vocals(
     compute_type: str | None = None,
     language: str = DEFAULT_LANGUAGE,
     clip_end: float | None = None,
+    vad_filter: bool = DEFAULT_VAD_FILTER,
 ) -> list[RawSegment]:
     """Transcribe isolated vocal stem with faster-whisper (rough word times).
 
@@ -113,7 +115,7 @@ def transcribe_vocals(
         transcribe_kwargs: dict[str, Any] = {
             "language": language,
             "word_timestamps": True,
-            "vad_filter": True,
+            "vad_filter": vad_filter,
         }
         if clip_end is not None:
             transcribe_kwargs["clip_timestamps"] = f"0,{clip_end}"
@@ -170,7 +172,9 @@ def _aligned_to_lyrics(
                 }
             )
         text = str(seg.get("text", "")).strip()
-        if not text and words:
+        if not words:
+            continue
+        if not text:
             text = " ".join(w["word"] for w in words)
         out_segments.append(
             {
@@ -236,6 +240,7 @@ def transcribe_and_align(
     compute_type: str | None = None,
     language: str = DEFAULT_LANGUAGE,
     clip_end: float | None = None,
+    vad_filter: bool = DEFAULT_VAD_FILTER,
 ) -> Path:
     """Transcribe, align, and write ``lyrics.json`` contract."""
     vocals_path = Path(vocals_path)
@@ -247,6 +252,7 @@ def transcribe_and_align(
         compute_type=compute_type,
         language=language,
         clip_end=clip_end,
+        vad_filter=vad_filter,
     )
     lyrics = align_lyrics(
         vocals_path,

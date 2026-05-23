@@ -2,13 +2,13 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 5 next (FFmpeg + ASS render) — Phase 4 Whisper ✓, Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md).
+**Current phase:** Phase 6 (integrate ML pipeline) — Phase 5 FFmpeg render ✓, Phase 4 Whisper ✓, Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Live preview:** https://automatic-karaoke.vercel.app
 
-**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md)
+**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md)
 
 **Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
@@ -110,6 +110,28 @@ pip install -r backend/requirements-whisper.txt
 
 Requires `scripts/output/psychosomatic/vocals.wav` at deploy time (baked into `_WHISPER_IMAGE`). See [PHASE_4.md](docs/PHASE_4.md).
 
+## Render (Phase 5) ✓
+
+FFmpeg must be on PATH locally (`ffmpeg -version`). No extra pip deps for render (see `backend/requirements-render.txt`).
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step1.py
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step3.py          # 30s clip
+.\.venv\Scripts\python.exe scripts\smoke_phase5_step5.py          # full song → psychosomatic/karaoke.mp4
+.\.venv\Scripts\python.exe scripts\smoke_render_modal.py --deploy # Modal CPU + API regression
+```
+
+Manual render:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\test_render_local.py `
+  --instrumental scripts\output\psychosomatic\instrumental.wav `
+  --lyrics scripts\output\psychosomatic\lyrics.json `
+  --output scripts\output\psychosomatic\karaoke.mp4 --no-clip
+```
+
+Bakes `psychosomatic/instrumental.wav` + `lyrics.json` into `_RENDER_IMAGE` at deploy. Stub orchestrator still returns `sample.mp4` until Phase 6. See [PHASE_5.md](docs/PHASE_5.md).
+
 ## Project phases
 
 | Phase | Focus |
@@ -119,7 +141,7 @@ Requires `scripts/output/psychosomatic/vocals.wav` at deploy time (baked into `_
 | 2 | Modal job endpoints |
 | 3 | Demucs isolation ✓ |
 | 4 | Whisper + WhisperX ✓ |
-| 5 | FFmpeg + ASS render (isolated) |
+| 5 | FFmpeg + ASS render (isolated) ✓ |
 | 6 | Full pipeline integration |
 | 7 | Hardening (upload, auth, performance) |
 
