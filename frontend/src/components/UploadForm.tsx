@@ -13,7 +13,13 @@ import {
   uploadDraftFile,
   warmIfNeeded,
 } from "../api/client";
-import { formatBytes, validateAudio } from "../lib/validateAudio";
+import {
+  formatBytes,
+  formatMaxDurationError,
+  MAX_AUDIO_DURATION_S,
+  probeAudioDuration,
+  validateAudio,
+} from "../lib/validateAudio";
 
 type Props = {
   disabled?: boolean;
@@ -33,6 +39,7 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [uploadReady, setUploadReady] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [checkingDuration, setCheckingDuration] = useState(false);
 
   const cancelDraftUpload = useCallback(async () => {
     uploadAbortRef.current?.abort();
@@ -111,17 +118,45 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
   );
 
   const handleFile = useCallback(
-    (file: File | undefined) => {
+    async (file: File | undefined) => {
       if (!file) return;
+      const generation = ++selectGenerationRef.current;
+
       const result = validateAudio(file);
       if (!result.ok) {
+        await cancelDraftUpload();
         setError(result.error);
         setSelected(null);
         setUploadReady(false);
         setUploadPct(null);
+        setCheckingDuration(false);
         return;
       }
+
+      await cancelDraftUpload();
       setError(null);
+      setSelected(null);
+      setUploadReady(false);
+      setUploadPct(null);
+      setCheckingDuration(true);
+
+      if (!isMockMode()) {
+        const durationS = await probeAudioDuration(file);
+        if (generation !== selectGenerationRef.current) {
+          return;
+        }
+        if (durationS !== null && durationS > MAX_AUDIO_DURATION_S) {
+          setError(formatMaxDurationError(durationS));
+          setCheckingDuration(false);
+          return;
+        }
+      }
+
+      if (generation !== selectGenerationRef.current) {
+        return;
+      }
+
+      setCheckingDuration(false);
       setSelected(file);
       if (isMockMode()) {
         setUploadReady(true);
@@ -130,7 +165,7 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
       }
       void startDraftUpload(file);
     },
-    [startDraftUpload]
+    [cancelDraftUpload, startDraftUpload]
   );
 
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +180,9 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
   };
 
   const onSubmitClick = () => {
-    if (!selected || !uploadReady || uploading || disabled) return;
+    if (!selected || !uploadReady || uploading || checkingDuration || disabled) {
+      return;
+    }
     if (isMockMode()) {
       onSubmit("mock", selected);
       return;
@@ -157,11 +194,13 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
 
   const submitLabel = disabled
     ? "Working…"
-    : uploading
-      ? "Uploading…"
-      : uploadReady
-        ? "Create karaoke video"
-        : "Waiting for upload…";
+    : checkingDuration
+      ? "Checking length…"
+      : uploading
+        ? "Uploading…"
+        : uploadReady
+          ? "Create karaoke video"
+          : "Waiting for upload…";
 
   return (
     <div className="upload-form">
@@ -186,7 +225,9 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
         aria-label="Upload audio file"
       >
         <p className="dropzone__title">Drop a song here or click to browse</p>
-        <p className="dropzone__hint">MP3, WAV, M4A, FLAC, OGG — max 50 MB</p>
+        <p className="dropzone__hint">
+          MP3, WAV, M4A, FLAC, OGG — max 50 MB, 8 minutes
+        </p>
         <input
           ref={inputRef}
           type="file"
@@ -216,7 +257,14 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
       <button
         type="button"
         className="btn btn--primary"
-        disabled={disabled || !selected || !uploadReady || uploading || !!error}
+        disabled={
+          disabled ||
+          checkingDuration ||
+          !selected ||
+          !uploadReady ||
+          uploading ||
+          !!error
+        }
         onClick={onSubmitClick}
       >
         {submitLabel}

@@ -272,7 +272,7 @@ Click Submit       → finalize → pipeline (warm, not cold)
 | 3.1 | After upload lands on Volume, ffprobe `input.*` duration |
 | 3.2 | If duration &gt; 480s: `set_failed` with clear message; do not spawn pipeline |
 | 3.3 | Return `400` or fail job early with `error` visible in `job-status` |
-| 3.4 | Frontend: surface `error` (already shown via `ProgressTracker`) |
+| 3.4 | Frontend: probe duration on file select (before `/warm`, draft, upload); surface `error` in form |
 
 **Gate:**
 

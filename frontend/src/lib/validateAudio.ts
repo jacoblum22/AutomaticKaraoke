@@ -1,5 +1,10 @@
 const MAX_BYTES = 50 * 1024 * 1024;
 
+/** Match backend ``duration_guard.MAX_AUDIO_DURATION_S``. */
+export const MAX_AUDIO_DURATION_S = 480;
+
+const DURATION_PROBE_TIMEOUT_MS = 15_000;
+
 const ALLOWED_MIME = new Set([
   "audio/mpeg",
   "audio/wav",
@@ -62,4 +67,52 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function formatMaxDurationError(durationS: number): string {
+  const actualMin = durationS / 60;
+  const limitMin = MAX_AUDIO_DURATION_S / 60;
+  return (
+    `Audio is too long (${actualMin.toFixed(1)} min). ` +
+    `Maximum length is ${limitMin.toFixed(0)} minutes.`
+  );
+}
+
+/** Read duration from file metadata in the browser (no upload). */
+export function probeAudioDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      audio.removeAttribute("src");
+      audio.load();
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      resolve(null);
+    }, DURATION_PROBE_TIMEOUT_MS);
+
+    audio.addEventListener("loadedmetadata", () => {
+      window.clearTimeout(timeoutId);
+      const durationS = audio.duration;
+      cleanup();
+      if (Number.isFinite(durationS) && durationS > 0) {
+        resolve(durationS);
+      } else {
+        resolve(null);
+      }
+    });
+
+    audio.addEventListener("error", () => {
+      window.clearTimeout(timeoutId);
+      cleanup();
+      resolve(null);
+    });
+
+    audio.preload = "metadata";
+    audio.src = url;
+  });
 }
