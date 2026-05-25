@@ -419,6 +419,7 @@ def separate_stems(
     """Run Demucs on GPU; returns (vocals_path, instrumental_path)."""
     from separate import separate_audio
 
+    JOBS_VOL.reload()
     vocals_path, instrumental_path = separate_audio(
         input_path,
         output_dir,
@@ -520,6 +521,7 @@ def transcribe_vocals_modal(
     """Transcribe + align on GPU; returns path to lyrics.json."""
     from transcribe import transcribe_and_align
 
+    JOBS_VOL.reload()
     out = transcribe_and_align(
         input_path,
         output_json,
@@ -613,6 +615,7 @@ def render_karaoke_modal(
     """Render karaoke MP4 on CPU; returns path to output file."""
     from render import render_karaoke
 
+    JOBS_VOL.reload()
     out = render_karaoke(
         instrumental_path,
         lyrics_path,
