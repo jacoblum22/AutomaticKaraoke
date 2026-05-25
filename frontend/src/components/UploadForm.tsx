@@ -1,23 +1,114 @@
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
   type DragEvent,
 } from "react";
-import { warmPipeline } from "../api/client";
+import {
+  createDraftJob,
+  deleteDraftJob,
+  isMockMode,
+  uploadDraftFile,
+  warmIfNeeded,
+} from "../api/client";
 import { formatBytes, validateAudio } from "../lib/validateAudio";
 
 type Props = {
   disabled?: boolean;
-  onSubmit: (file: File) => void;
+  /** Called with draft ``job_id`` when upload is complete and user submits. */
+  onSubmit: (jobId: string, file?: File) => void;
 };
 
 export function UploadForm({ disabled = false, onSubmit }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const draftJobIdRef = useRef<string | null>(null);
+  const selectGenerationRef = useRef(0);
+
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<File | null>(null);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [uploadReady, setUploadReady] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const cancelDraftUpload = useCallback(async () => {
+    uploadAbortRef.current?.abort();
+    uploadAbortRef.current = null;
+    const oldId = draftJobIdRef.current;
+    draftJobIdRef.current = null;
+    if (oldId) {
+      try {
+        await deleteDraftJob(oldId);
+      } catch {
+        /* best-effort discard */
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      void cancelDraftUpload();
+    };
+  }, [cancelDraftUpload]);
+
+  const startDraftUpload = useCallback(
+    async (file: File) => {
+      const generation = ++selectGenerationRef.current;
+      await cancelDraftUpload();
+
+      setUploadReady(false);
+      setUploadPct(0);
+      setUploading(true);
+      setError(null);
+
+      warmIfNeeded();
+
+      try {
+        const { job_id } = await createDraftJob();
+        if (generation !== selectGenerationRef.current) {
+          await deleteDraftJob(job_id);
+          return;
+        }
+
+        draftJobIdRef.current = job_id;
+        const abort = new AbortController();
+        uploadAbortRef.current = abort;
+
+        await uploadDraftFile(job_id, file, {
+          signal: abort.signal,
+          onProgress: (pct) => {
+            if (generation === selectGenerationRef.current) {
+              setUploadPct(pct);
+            }
+          },
+        });
+
+        if (generation !== selectGenerationRef.current) {
+          return;
+        }
+
+        setUploadPct(100);
+        setUploadReady(true);
+      } catch (err) {
+        if (generation !== selectGenerationRef.current) {
+          return;
+        }
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Upload failed");
+        setUploadReady(false);
+      } finally {
+        if (generation === selectGenerationRef.current) {
+          setUploading(false);
+        }
+      }
+    },
+    [cancelDraftUpload]
+  );
 
   const handleFile = useCallback(
     (file: File | undefined) => {
@@ -26,13 +117,20 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
       if (!result.ok) {
         setError(result.error);
         setSelected(null);
+        setUploadReady(false);
+        setUploadPct(null);
         return;
       }
       setError(null);
       setSelected(file);
-      warmPipeline();
+      if (isMockMode()) {
+        setUploadReady(true);
+        setUploadPct(100);
+        return;
+      }
+      void startDraftUpload(file);
     },
-    []
+    [startDraftUpload]
   );
 
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -47,9 +145,23 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
   };
 
   const onSubmitClick = () => {
-    if (!selected || disabled) return;
-    onSubmit(selected);
+    if (!selected || !uploadReady || uploading || disabled) return;
+    if (isMockMode()) {
+      onSubmit("mock", selected);
+      return;
+    }
+    const jobId = draftJobIdRef.current;
+    if (!jobId) return;
+    onSubmit(jobId);
   };
+
+  const submitLabel = disabled
+    ? "Working…"
+    : uploading
+      ? "Uploading…"
+      : uploadReady
+        ? "Create karaoke video"
+        : "Waiting for upload…";
 
   return (
     <div className="upload-form">
@@ -88,6 +200,10 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
       {selected && !error && (
         <p className="upload-form__file">
           <strong>{selected.name}</strong> ({formatBytes(selected.size)})
+          {uploadPct !== null && uploading && (
+            <> — uploading {uploadPct}%</>
+          )}
+          {uploadReady && !uploading && <> — ready</>}
         </p>
       )}
 
@@ -100,10 +216,10 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
       <button
         type="button"
         className="btn btn--primary"
-        disabled={disabled || !selected || !!error}
+        disabled={disabled || !selected || !uploadReady || uploading || !!error}
         onClick={onSubmitClick}
       >
-        {disabled ? "Working…" : "Create karaoke video"}
+        {submitLabel}
       </button>
     </div>
   );

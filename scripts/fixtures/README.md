@@ -8,6 +8,7 @@ Phase 3+ scripts expect audio files here. **Do not commit copyrighted commercial
 | `sample_30s.mp3` | 3 | Same clip as MP3 if `ffmpeg` is on PATH; or add your own ~30s mix |
 | `vocals_30s.wav` | 3→4 | From Demucs output (gitignored ~5 MB); Phase 4 default input |
 | `Psychosomatic.mp3` | 7 | ~3 min test song (gitignored); `copy_psychosomatic_fixture.py` |
+| `over_8min.mp3` | 7 | ~9 min tone (gitignored); `generate_long_fixture.py` — duration guard smoke |
 
 ```powershell
 # From repo root — synthetic fixture (no copyright):

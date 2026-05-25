@@ -220,6 +220,15 @@ def run_real_pipeline(
     pipeline_t0 = time.perf_counter()
     try:
         input_path = _require_job_input(job_id, volume=volume)
+
+        from duration_guard import max_duration_violation
+
+        duration_err = max_duration_violation(input_path)
+        if duration_err:
+            set_failed(job_id, duration_err)
+            log_job_event(job_id, "pipeline", "failed", error=duration_err)
+            return
+
         workdir = job_dir(job_id)
 
         start_fields: dict[str, float | str] = {}

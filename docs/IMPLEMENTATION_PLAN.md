@@ -328,7 +328,7 @@ start-job
 | Area | Actions |
 |------|---------|
 | Performance | `POST /warm` on file select; `scaledown_window=120` on GPU functions; per-stage timing logs |
-| Upload | Presigned POST to R2 instead of multipart to Modal (optional Step 6) |
+| Upload | Early upload on file select (optional [Step 2b](./PHASE_7.md#step-2b--early-upload-on-file-select-optional)); presigned R2 (optional Step 6) |
 | Security | Rate limit, max duration (e.g. 8 min), auth optional |
 | Observability | Structured logs per `job_id`; Modal dashboards |
 | Cost | Log GPU seconds per job; document intent-based warm-up cost (~$0.07/bounce) |

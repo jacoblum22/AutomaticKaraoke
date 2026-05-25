@@ -78,7 +78,7 @@ Requires Modal secret **`karaoke-r2`** for R2 upload + real `video_url`.
 
 Smoke tests (repo root): `scripts/smoke_pipeline_modal.py`, `scripts/smoke_phase6_step8.py --verify-only`
 
-**Phase 7 (in progress):** On file select, the UI calls `POST /warm` to load GPU models while you upload (~$0.07/bounce if you pick a file but never submit; GPUs idle out after 2 min). See [PHASE_7.md](docs/PHASE_7.md).
+**Phase 7 (in progress):** On file select, the UI calls `POST /warm` to load GPU models while you upload (~$0.07/bounce if you pick a file but never submit; GPUs idle out after 2 min). Planned: [early upload on drop](docs/PHASE_7.md#step-2b--early-upload-on-file-select-optional) (overlap upload with warm; safe file replace). See [PHASE_7.md](docs/PHASE_7.md).
 
 ## Demucs (Phase 3) ✓
 

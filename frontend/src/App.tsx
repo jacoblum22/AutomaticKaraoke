@@ -1,5 +1,11 @@
 import { useCallback, useState } from "react";
-import { API_BASE, getJobStatus, isMockMode, startJob } from "./api/client";
+import {
+  API_BASE,
+  finalizeJob,
+  getJobStatus,
+  isMockMode,
+  startJob,
+} from "./api/client";
 import { ProgressTracker } from "./components/ProgressTracker";
 import { UploadForm } from "./components/UploadForm";
 import { VideoPlayer } from "./components/VideoPlayer";
@@ -13,6 +19,7 @@ function App() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [formKey, setFormKey] = useState(0);
 
   const processing =
     busy ||
@@ -34,25 +41,25 @@ function App() {
 
   useJobPolling(jobId, setJobStatus, handleTerminal);
 
-  const handleUpload = async (file: File) => {
+  const handleFinalize = async (draftJobId: string, file?: File) => {
     setStartError(null);
     setVideoUrl(null);
     setBusy(true);
-    // Show progress immediately — startJob blocks until upload + server respond.
     setJobStatus({
-      job_id: "",
+      job_id: draftJobId,
       status: "queued",
       progress: 0,
-      message: "Uploading and starting job…",
+      message: "Starting pipeline…",
     });
 
     const t0 = performance.now();
     try {
-      const { job_id } = await startJob(file);
+      const { job_id } =
+        isMockMode() && file ? await startJob(file) : await finalizeJob(draftJobId);
       if (import.meta.env.DEV) {
         console.info(
-          `[timing] start-job: ${(performance.now() - t0).toFixed(0)} ms`,
-          { bytes: file.size, name: file.name }
+          `[timing] finalize-job: ${(performance.now() - t0).toFixed(0)} ms`,
+          { job_id }
         );
       }
       setJobId(job_id);
@@ -79,6 +86,7 @@ function App() {
     setJobStatus(null);
     setVideoUrl(null);
     setStartError(null);
+    setFormKey((k) => k + 1);
   };
 
   return (
@@ -93,7 +101,7 @@ function App() {
       </header>
 
       <section className="app__panel">
-        <UploadForm disabled={processing} onSubmit={handleUpload} />
+        <UploadForm key={formKey} disabled={processing} onSubmit={handleFinalize} />
 
         {startError && (
           <p className="app__error" role="alert">

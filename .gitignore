@@ -21,6 +21,7 @@ scripts/fixtures/sample_30s.wav
 scripts/fixtures/vocals_30s.wav
 # Full songs for local quality tests (user-provided; do not commit commercial tracks)
 scripts/fixtures/Psychosomatic.mp3
+scripts/fixtures/over_8min.mp3
 
 # OS / editor
 .DS_Store

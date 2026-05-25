@@ -31,21 +31,24 @@ class JobRecord(TypedDict, total=False):
     error: str
     created_at: str
     stage_timings: dict[str, float]
+    is_draft: bool
 
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def create_job(job_id: str) -> None:
+def create_job(job_id: str, *, is_draft: bool = False) -> None:
     """Insert a new job in queued state."""
     record: JobRecord = {
         "job_id": job_id,
         "status": "queued",
         "progress": 0,
-        "message": "Queued…",
+        "message": "Waiting for upload…" if is_draft else "Queued…",
         "created_at": _utc_now_iso(),
     }
+    if is_draft:
+        record["is_draft"] = True
     JOBS[job_id] = record
 
 
