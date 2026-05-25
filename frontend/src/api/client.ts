@@ -25,6 +25,16 @@ export async function startJob(file: File): Promise<StartJobResponse> {
   return res.json() as Promise<StartJobResponse>;
 }
 
+/** Fire-and-forget GPU warm-up when user selects a file (Phase 7). */
+export function warmPipeline(): void {
+  if (isMockMode()) {
+    return;
+  }
+  void fetch(`${API_BASE}/warm`, { method: "POST" }).catch(() => {
+    /* ignore — upload still works on cold GPUs */
+  });
+}
+
 export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
   if (isMockMode()) {
     return mockGetJobStatus(jobId);

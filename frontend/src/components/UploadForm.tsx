@@ -5,6 +5,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react";
+import { warmPipeline } from "../api/client";
 import { formatBytes, validateAudio } from "../lib/validateAudio";
 
 type Props = {
@@ -29,6 +30,7 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
       }
       setError(null);
       setSelected(file);
+      warmPipeline();
     },
     []
   );

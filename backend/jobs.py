@@ -30,6 +30,7 @@ class JobRecord(TypedDict, total=False):
     video_url: str
     error: str
     created_at: str
+    stage_timings: dict[str, float]
 
 
 def _utc_now_iso() -> str:

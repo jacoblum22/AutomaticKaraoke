@@ -34,6 +34,7 @@ _PSYCHO_KARAOKE = _REPO_ROOT / "scripts" / "output" / "psychosomatic" / "karaoke
 
 _backend_image = (
     modal.Image.debian_slim(python_version="3.12")
+    .apt_install("ffmpeg")
     .pip_install_from_requirements(_BACKEND_DIR / "requirements.txt")
     .add_local_dir(_BACKEND_DIR, remote_path="/root")
 )
@@ -227,6 +228,7 @@ def karaoke_api():
 
     return create_api(
         spawn_pipeline=lambda job_id: run_real_pipeline.spawn(job_id),
+        spawn_warm=lambda: warm_gpu_pipeline.spawn(),
         jobs_volume=JOBS_VOL,
     )
 
@@ -360,6 +362,44 @@ def smoke_orchestrator_happy() -> str:
     return job_id
 
 
+# --- Phase 7 Step 2 — intent-based GPU warm-up ---
+
+GPU_SCALEDOWN_WINDOW = 120  # seconds idle before scale-to-zero
+
+
+@app.function(image=_BACKEND_IMAGE, timeout=120)
+def warm_gpu_pipeline() -> dict[str, str | list[str]]:
+    """Spawn Demucs + Whisper on bundled fixtures to warm production GPU containers."""
+    work_id = uuid.uuid4().hex[:8]
+    spawned: list[str] = []
+
+    demucs_fixture = Path("/fixtures/sample_30s.mp3")
+    if demucs_fixture.is_file():
+        separate_stems.spawn(
+            str(demucs_fixture),
+            f"/tmp/warm_demucs_{work_id}",
+            device="cuda",
+        )
+        spawned.append("demucs")
+    else:
+        print("WARM_SKIP demucs fixture missing", flush=True)
+
+    vocals_fixture = Path("/fixtures/vocals_smoke.wav")
+    if vocals_fixture.is_file():
+        transcribe_vocals_modal.spawn(
+            str(vocals_fixture),
+            f"/tmp/warm_whisper_{work_id}.json",
+            clip_end=1.0,
+            model_size="large-v3",
+        )
+        spawned.append("whisper")
+    else:
+        print("WARM_SKIP whisper fixture missing", flush=True)
+
+    print(f"WARM_SPAWNED work_id={work_id} targets={spawned}", flush=True)
+    return {"status": "accepted", "spawned": spawned}
+
+
 # --- Phase 3 — Demucs GPU ---
 
 
@@ -367,6 +407,7 @@ def smoke_orchestrator_happy() -> str:
     image=_DEMUCS_IMAGE,
     gpu="T4",
     timeout=1200,
+    scaledown_window=GPU_SCALEDOWN_WINDOW,
     volumes={JOBS_MOUNT: JOBS_VOL},
 )
 def separate_stems(
@@ -465,6 +506,7 @@ def smoke_demucs_psychosomatic() -> dict:
     image=_WHISPER_IMAGE,
     gpu="T4",
     timeout=1200,
+    scaledown_window=GPU_SCALEDOWN_WINDOW,
     volumes={JOBS_MOUNT: JOBS_VOL},
 )
 def transcribe_vocals_modal(
@@ -659,6 +701,56 @@ def smoke_phase6_skeleton_happy() -> str:
     delete_job(job_id)
     print(f"JOB_ID={job_id}", flush=True)
     return job_id
+
+
+# --- Phase 7 Step 1 — structured logging ---
+
+
+@app.function(image=_BACKEND_IMAGE, volumes={JOBS_MOUNT: JOBS_VOL})
+def smoke_phase7_stage_logs() -> dict:
+    """Skeleton pipeline with per-stage timing logs (no ML)."""
+    from job_storage import delete_job_workspace, write_job_input
+
+    fixture = Path("/fixtures/sample_30s.mp3")
+    if not fixture.is_file():
+        raise FileNotFoundError(f"fixture missing in image: {fixture}")
+
+    job_id = str(uuid.uuid4())
+    create_job(job_id)
+    write_job_input(
+        job_id,
+        "sample_30s.mp3",
+        "audio/mpeg",
+        fixture.read_bytes(),
+        volume=JOBS_VOL,
+    )
+    _run_real_pipeline(job_id, volume=JOBS_VOL)
+
+    job = get_job(job_id)
+    if job is None:
+        raise RuntimeError(f"job missing after pipeline: {job_id}")
+
+    if job.get("status") != "rendering":
+        raise RuntimeError(
+            f"expected rendering, got {job.get('status')}: {job.get('error')}"
+        )
+
+    timings = dict(job.get("stage_timings") or {})
+    required = ("separating", "transcribing", "rendering")
+    missing = [stage for stage in required if stage not in timings]
+    if missing:
+        raise RuntimeError(f"missing stage_timings for {missing}: {timings}")
+
+    for stage in required:
+        elapsed = timings[stage]
+        if not isinstance(elapsed, (int, float)) or elapsed <= 0:
+            raise RuntimeError(f"invalid elapsed for {stage}: {elapsed!r}")
+
+    delete_job(job_id)
+    delete_job_workspace(job_id, JOBS_VOL)
+
+    print(f"JOB_ID={job_id}", flush=True)
+    return {"job_id": job_id, "stage_timings": timings}
 
 
 @app.function(image=_BACKEND_IMAGE, volumes={JOBS_MOUNT: JOBS_VOL})

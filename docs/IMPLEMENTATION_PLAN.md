@@ -90,7 +90,8 @@ AutomaticKaraoke/
 │   ├── PHASE_3.md                      # Phase 3 runbook (Demucs)
 │   ├── PHASE_4.md                      # Phase 4 runbook (Whisper + WhisperX)
 │   ├── PHASE_5.md                      # Phase 5 runbook (FFmpeg + ASS)
-│   └── PHASE_6.md                      # Phase 6 runbook (pipeline integration)
+│   ├── PHASE_6.md                      # Phase 6 runbook (pipeline integration)
+│   └── PHASE_7.md                      # Phase 7 runbook (production hardening)
 ├── frontend/                           # Phase 0 scaffold → Phase 1 — Vercel
 │   ├── .env.example                    # VITE_API_URL
 │   ├── package.json
@@ -311,7 +312,7 @@ start-job
 **Verification checklist**
 
 - [x] One real song completes via API only (curl or frontend)
-- [ ] Total time &lt; 90s on T4 for 3-min song (153s cold logged; Phase 7 `keep_warm`)
+- [ ] Total time &lt; 90s on T4 for 3-min song (153s cold logged; Phase 7 file-select warm-up)
 - [x] Failed pipeline does not leave orphan “done” status
 
 **Exit:** [PHASE_6 checklist](./PHASE_6.md#phase-6-completion-checklist); `POST /start-job` returns real karaoke MP4 URL.
@@ -320,13 +321,20 @@ start-job
 
 ### Phase 7 — Production hardening
 
+**Detailed runbook:** [PHASE_7.md](./PHASE_7.md) — file-select GPU warm-up, `scaledown_window=120`, timing logs, TTL cleanup, rate limits, optional presigned upload.
+
+**Entry criteria:** [Phase 6](./PHASE_6.md#exit-criteria--phase-7) exit.
+
 | Area | Actions |
 |------|---------|
-| Performance | `keep_warm=1` on GPU functions; consider A10G if needed |
-| Upload | Presigned POST to R2 instead of base64 (size/latency) |
+| Performance | `POST /warm` on file select; `scaledown_window=120` on GPU functions; per-stage timing logs |
+| Upload | Presigned POST to R2 instead of multipart to Modal (optional Step 6) |
 | Security | Rate limit, max duration (e.g. 8 min), auth optional |
-| Observability | Structured logs per job_id; Modal dashboards |
-| Cost | Log GPU seconds per job |
+| Observability | Structured logs per `job_id`; Modal dashboards |
+| Cost | Log GPU seconds per job; document intent-based warm-up cost (~$0.07/bounce) |
+| Storage | TTL cleanup: R2 objects, Volume dirs, Dict rows (24h) |
+
+**Exit:** [PHASE_7 checklist](./PHASE_7.md#phase-7-completion-checklist).
 
 ---
 
@@ -415,7 +423,7 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 | Whisper timing off on sung lyrics | Transcribe on **vocal stem** + WhisperX align; v2 = manual offset / lyric editor |
 | Wrong lyrics (ASR) | User-visible transcript in v2; v1 accepts occasional mis-hears on hard songs |
 | Browser timeout | Async job + poll only |
-| Modal cold start + 1GB Demucs load | `keep_warm=1`; split images; htdemucs not ft |
+| Modal cold start + 1GB Demucs load | File-select `/warm` + `scaledown_window=120`; split images; htdemucs not ft |
 | Large uploads on Vercel | Cap file size; move to R2 presigned upload |
 | GPU preemption | Short jobs (&lt;2 min); retry once on failure |
 | Copyright / abuse | ToS + rate limits; no public anonymous high limits |
@@ -464,7 +472,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 4. ~~**Phase 3 — Demucs in isolation**~~ ✓ — [PHASE_3.md](./PHASE_3.md) (Psychosomatic ear-test signed off May 2026).  
 5. ~~**Phase 4 — Transcription + alignment**~~ ✓ — [PHASE_4.md](./PHASE_4.md).  
 6. ~~**Phase 5 — FFmpeg + ASS render**~~ ✓ — [PHASE_5.md](./PHASE_5.md) (Psychosomatic `karaoke.mp4` signed off May 2026).  
-7. **Phase 6 — Integrate ML into backend** — [PHASE_6.md](./PHASE_6.md).
+7. ~~**Phase 6 — Integrate ML into backend**~~ ✓ — [PHASE_6.md](./PHASE_6.md).  
+8. **Phase 7 — Production hardening** — [PHASE_7.md](./PHASE_7.md).
 
 ---
 
@@ -524,4 +533,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 2.3 — adds [PHASE_6.md](./PHASE_6.md) pipeline integration runbook.*
+*Document version: 2.4 — adds [PHASE_7.md](./PHASE_7.md) production hardening runbook.*

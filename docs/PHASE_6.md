@@ -5,7 +5,7 @@
 **Estimated time:** 16–30 hours (Volume + cross-image orchestration + R2 + E2E debugging)  
 **Goal:** Replace the Phase 2 **stub orchestrator** with a real pipeline: user upload → Demucs → transcribe+align → render → **real MP4 URL** on `job-status`. Minimal frontend change (play `video_url` when done).
 
-**Out of scope for Phase 6:** Presigned R2 upload from browser, auth/payments, rate limits, `keep_warm` tuning (Phase 7), lyric accuracy improvements (Phase 4 tuning / v2 lyric sources).
+**Out of scope for Phase 6:** Presigned R2 upload from browser, auth/payments, rate limits, GPU warm-up tuning (Phase 7), lyric accuracy improvements (Phase 4 tuning / v2 lyric sources).
 
 ### Current progress
 
@@ -17,7 +17,7 @@
 
 **Deployed API:** https://jacoblum22--karaoke-api.modal.run
 
-**Next after Phase 6:** [Phase 7 — Production hardening](./IMPLEMENTATION_PLAN.md#phase-7--production-hardening) — presigned uploads, `keep_warm`, observability, production R2 TTL.
+**Next after Phase 6:** [Phase 7 — Production hardening](./PHASE_7.md) — file-select GPU warm-up, TTL cleanup, rate limits, observability.
 
 ---
 
@@ -384,13 +384,13 @@ After `App.tsx` subtitle change, **redeploy frontend** (`git push main` or `verc
 ### Performance (reference)
 
 - [x] Log wall time per stage + total for ~3 min song (Step 7 smoke logs total wall time)
-- [ ] Warm GPU path meets or documents gap vs &lt;90s target (153s cold; Phase 7 `keep_warm`)
+- [ ] Warm GPU path meets or documents gap vs &lt;90s target (153s cold; Phase 7 file-select warm-up)
 
 ### Explicitly NOT done (confirm)
 
 - [x] No presigned browser → R2 upload (still multipart to Modal)
 - [x] No auth / rate limits
-- [x] No `keep_warm` (Phase 7)
+- [x] No GPU warm-up on file select (Phase 7)
 - [x] Lyric text accuracy not re-opened (Phase 4 concern)
 
 ---
@@ -418,7 +418,7 @@ Phase 6 is **complete** when:
 | `done` but `sample.mp4` | Orchestrator still stub; check `app.py` spawn target |
 | R2 403 / wrong URL | Secret keys, bucket CORS, `R2_PUBLIC_BASE_URL` |
 | Lyrics wrong in video | Phase 4 ASR — not orchestrator; tune model separately |
-| Cold start &gt;90s | Expected first run; Phase 7 `keep_warm`; log per-stage times |
+| Cold start &gt;90s | Expected first run; Phase 7 file-select `/warm` + 2 min scaledown; log per-stage times |
 | `sample_30s.mp3` in Step 7 E2E | Whisper fails (tone, no speech) | Use `Psychosomatic.mp3` (default in `smoke_pipeline_modal.py`) |
 | CORS on `video_url` | R2 public access or CDN; separate from Modal API CORS |
 

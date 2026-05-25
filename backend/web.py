@@ -56,11 +56,14 @@ def create_api(
     *,
     spawn_pipeline: Any,
     jobs_volume: Any | None = None,
+    spawn_warm: Any | None = None,
 ) -> FastAPI:
     """Build FastAPI app; spawn_pipeline(job_id) starts background work.
 
     When ``jobs_volume`` is set (Modal), uploads are persisted under
     ``/jobs/{job_id}/input.*`` before the pipeline is spawned.
+
+    When ``spawn_warm`` is set, ``POST /warm`` queues GPU model warm-up (Phase 7).
     """
     api = FastAPI(title="Automatic Karaoke API", docs_url="/docs")
 
@@ -139,5 +142,16 @@ def create_api(
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found")
         return dict(job)
+
+    @api.post("/warm", status_code=202)
+    async def warm_pipeline() -> dict[str, str]:
+        """Intent-based GPU warm-up (file selected in UI). Idempotent; returns immediately."""
+        if spawn_warm is None:
+            raise HTTPException(
+                status_code=503,
+                detail="GPU warm-up not configured on this server",
+            )
+        spawn_warm()
+        return {"status": "accepted"}
 
     return api

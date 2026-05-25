@@ -2,7 +2,7 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 6 complete ✓ — full pipeline on [Modal](https://jacoblum22--karaoke-api.modal.run), frontend on [Vercel](https://automatic-karaoke.vercel.app). Next: [Phase 7](docs/IMPLEMENTATION_PLAN.md#phase-7--production-hardening). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md).
+**Current phase:** Phase 6 complete ✓ — full pipeline on [Modal](https://jacoblum22--karaoke-api.modal.run), frontend on [Vercel](https://automatic-karaoke.vercel.app). **Next:** [Phase 7 — Production hardening](docs/PHASE_7.md). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md) · [7](docs/PHASE_7.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
@@ -77,6 +77,8 @@ modal deploy app.py
 Requires Modal secret **`karaoke-r2`** for R2 upload + real `video_url`.
 
 Smoke tests (repo root): `scripts/smoke_pipeline_modal.py`, `scripts/smoke_phase6_step8.py --verify-only`
+
+**Phase 7 (in progress):** On file select, the UI calls `POST /warm` to load GPU models while you upload (~$0.07/bounce if you pick a file but never submit; GPUs idle out after 2 min). See [PHASE_7.md](docs/PHASE_7.md).
 
 ## Demucs (Phase 3) ✓
 
@@ -157,7 +159,7 @@ Prerequisites: R2 bucket + Modal secret `karaoke-r2`; Vercel `VITE_USE_MOCK=fals
 | 4 | Whisper + WhisperX ✓ |
 | 5 | FFmpeg + ASS render (isolated) ✓ |
 | 6 | Full pipeline integration ✓ |
-| 7 | Hardening (upload, auth, performance) |
+| 7 | Production hardening (see [PHASE_7.md](docs/PHASE_7.md)) |
 
 ## License
 

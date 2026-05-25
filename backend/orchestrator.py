@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+from job_logging import log_job_event, probe_media_duration_s, stage_timer
 from job_storage import job_dir
 from jobs import JobStatus, set_failed, update_job
 from pipeline_stems import expected_stem_paths
@@ -216,73 +217,89 @@ def run_real_pipeline(
     clip_end: float | None = None,
 ) -> None:
     """Real pipeline: Demucs → transcribe+align → render (wired incrementally)."""
+    pipeline_t0 = time.perf_counter()
     try:
         input_path = _require_job_input(job_id, volume=volume)
         workdir = job_dir(job_id)
 
-        if separate_stems_fn is not None:
-            _run_separation(
-                job_id,
-                input_path,
-                separate_stems_fn=separate_stems_fn,
-                volume=volume,
-            )
-            if volume is not None:
-                volume.commit()  # type: ignore[attr-defined]
-        else:
-            update_job(
-                job_id,
-                status="separating",
-                progress=20,
-                message="Separating vocals…",
-            )
-            time.sleep(SKELETON_STAGE_SLEEP_S)
+        start_fields: dict[str, float | str] = {}
+        input_duration_s = probe_media_duration_s(input_path)
+        if input_duration_s is not None:
+            start_fields["input_duration_s"] = round(input_duration_s, 3)
+        log_job_event(job_id, "pipeline", "start", **start_fields)
 
-        if transcribe_vocals_fn is not None:
-            _run_transcription(
-                job_id,
-                workdir,
-                transcribe_vocals_fn=transcribe_vocals_fn,
-                volume=volume,
-                simulate_fail=simulate_fail,
-                fail_at=fail_at,
-                model_size=model_size,
-                clip_end=clip_end,
-            )
-            if volume is not None:
-                volume.commit()  # type: ignore[attr-defined]
-        else:
-            _advance_stages(
-                job_id,
-                POST_SEPARATION_STAGES,
-                sleep_s=SKELETON_STAGE_SLEEP_S,
-                simulate_fail=simulate_fail,
-                fail_at=fail_at,
-            )
+        with stage_timer(job_id, "separating"):
+            if separate_stems_fn is not None:
+                _run_separation(
+                    job_id,
+                    input_path,
+                    separate_stems_fn=separate_stems_fn,
+                    volume=volume,
+                )
+                if volume is not None:
+                    volume.commit()  # type: ignore[attr-defined]
+            else:
+                update_job(
+                    job_id,
+                    status="separating",
+                    progress=20,
+                    message="Separating vocals…",
+                )
+                time.sleep(SKELETON_STAGE_SLEEP_S)
 
-        if render_karaoke_fn is not None:
-            _run_render(
-                job_id,
-                workdir,
-                render_karaoke_fn=render_karaoke_fn,
-                volume=volume,
-                simulate_fail=simulate_fail,
-                fail_at=fail_at,
-                clip_end=clip_end,
-            )
-            if volume is not None:
-                volume.commit()  # type: ignore[attr-defined]
-        else:
-            _advance_stages(
-                job_id,
-                POST_TRANSCRIPTION_SKELETON_STAGES,
-                sleep_s=SKELETON_STAGE_SLEEP_S,
-                simulate_fail=False,
-            )
+        with stage_timer(job_id, "transcribing"):
+            if transcribe_vocals_fn is not None:
+                _run_transcription(
+                    job_id,
+                    workdir,
+                    transcribe_vocals_fn=transcribe_vocals_fn,
+                    volume=volume,
+                    simulate_fail=simulate_fail,
+                    fail_at=fail_at,
+                    model_size=model_size,
+                    clip_end=clip_end,
+                )
+                if volume is not None:
+                    volume.commit()  # type: ignore[attr-defined]
+            else:
+                _advance_stages(
+                    job_id,
+                    POST_SEPARATION_STAGES,
+                    sleep_s=SKELETON_STAGE_SLEEP_S,
+                    simulate_fail=simulate_fail,
+                    fail_at=fail_at,
+                )
+
+        with stage_timer(job_id, "rendering"):
+            if render_karaoke_fn is not None:
+                _run_render(
+                    job_id,
+                    workdir,
+                    render_karaoke_fn=render_karaoke_fn,
+                    volume=volume,
+                    simulate_fail=simulate_fail,
+                    fail_at=fail_at,
+                    clip_end=clip_end,
+                )
+                if volume is not None:
+                    volume.commit()  # type: ignore[attr-defined]
+            else:
+                _advance_stages(
+                    job_id,
+                    POST_TRANSCRIPTION_SKELETON_STAGES,
+                    sleep_s=SKELETON_STAGE_SLEEP_S,
+                    simulate_fail=False,
+                )
 
         if upload_karaoke_fn is not None:
-            if render_karaoke_fn is None:
-                raise RuntimeError("upload requires render_karaoke_fn")
-            _run_upload(job_id, workdir, upload_karaoke_fn)
+            with stage_timer(job_id, "upload"):
+                if render_karaoke_fn is None:
+                    raise RuntimeError("upload requires render_karaoke_fn")
+                _run_upload(job_id, workdir, upload_karaoke_fn)
+
+        elapsed_s = round(time.perf_counter() - pipeline_t0, 3)
+        log_job_event(job_id, "pipeline", "done", elapsed_s=elapsed_s)
     except Exception as exc:
+        elapsed_s = round(time.perf_counter() - pipeline_t0, 3)
+        log_job_event(job_id, "pipeline", "failed", elapsed_s=elapsed_s, error=str(exc))
         set_failed(job_id, str(exc))

@@ -81,6 +81,18 @@ def _content_type(path: Path) -> str:
     )
 
 
+def post_warm(base_url: str) -> None:
+    req = Request(f"{base_url.rstrip('/')}/warm", data=b"", method="POST")
+    try:
+        with urlopen(req, timeout=30) as resp:
+            if resp.status != 202:
+                body = resp.read().decode("utf-8", errors="replace")
+                raise SystemExit(f"POST /warm expected 202, got {resp.status}: {body}")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise SystemExit(f"POST /warm failed: HTTP {exc.code} {detail}") from exc
+
+
 def post_start_job(base_url: str, fixture: Path) -> str:
     data = fixture.read_bytes()
     body, ctype = _multipart_body(fixture.name, data, _content_type(fixture))
@@ -160,6 +172,17 @@ def main() -> int:
         default=None,
         help="Audio file to upload (default: Psychosomatic.mp3 if present)",
     )
+    parser.add_argument(
+        "--warm",
+        action="store_true",
+        help="POST /warm before start-job (Phase 7 file-select simulation)",
+    )
+    parser.add_argument(
+        "--warm-wait",
+        type=int,
+        default=45,
+        help="Seconds to wait after /warm before upload (default 45)",
+    )
     args = parser.parse_args()
 
     fixture = find_fixture(args.fixture)
@@ -172,6 +195,11 @@ def main() -> int:
 
     if args.deploy:
         run_deploy()
+
+    if args.warm:
+        print(f"\nPOST /warm (wait {args.warm_wait}s before upload) …")
+        post_warm(args.base_url)
+        time.sleep(args.warm_wait)
 
     job_id = ""
     cleanup_queue: list[tuple[str, bool]] = []
