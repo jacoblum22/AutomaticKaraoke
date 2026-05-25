@@ -27,6 +27,30 @@ python scripts/smoke_phase4_step5.py --local
 
 # Phase 5 Step 1 — FFmpeg on PATH (install separately; not a pip package)
 .\.venv\Scripts\python.exe scripts\smoke_phase5_step1.py
+# Phase 6 Step 1 — job upload on Modal Volume
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step1.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step1.py
+# Phase 6 Step 2 — skeleton orchestrator (no ML; stops at rendering)
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step2.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step2.py
+# Phase 6 Step 3 — Demucs separation on job Volume (~1–3 min GPU)
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step3.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step3.py
+# Phase 6 Step 4 — transcribe + align → lyrics.json on Volume (~2–5 min GPU)
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step4.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step4.py
+# Phase 6 Step 5 — render → karaoke.mp4 on Volume (~2–6 min)
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step5.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step5.py
+# Phase 6 Step 6 — R2 upload + video_url (requires Modal secret karaoke-r2)
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step6.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step6.py
+# Phase 6 Step 7 — E2E API: POST /start-job → poll → real R2 video_url (~10–25 min)
+.\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py
+# Phase 6 Step 8 — production frontend sign-off
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step8.py --verify-only
+cd frontend && npm run smoke:modal
 .\.venv\Scripts\python.exe scripts\smoke_phase5_step2.py
 .\.venv\Scripts\python.exe scripts\smoke_phase5_step3.py
 .\.venv\Scripts\python.exe scripts\smoke_phase5_step4.py

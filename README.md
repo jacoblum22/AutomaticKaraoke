@@ -2,7 +2,7 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 6 (integrate ML pipeline) — Phase 5 FFmpeg render ✓, Phase 4 Whisper ✓, Phase 3 Demucs ✓, Phase 2 API on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md).
+**Current phase:** Phase 6 complete ✓ — full pipeline on [Modal](https://jacoblum22--karaoke-api.modal.run), frontend on [Vercel](https://automatic-karaoke.vercel.app). Next: [Phase 7](docs/IMPLEMENTATION_PLAN.md#phase-7--production-hardening). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
@@ -27,12 +27,12 @@ cp .env.modal .env.local    # Phase 2: real Modal API (or cp .env.example for mo
 npm run dev
 ```
 
-Upload an audio file — stub pipeline hits **Modal** (`VITE_USE_MOCK=false`) or in-browser mock (`VITE_USE_MOCK=true`).
+Upload an audio file — real pipeline on **Modal** (`VITE_USE_MOCK=false`) or in-browser mock (`VITE_USE_MOCK=true`).
 
 ```bash
 npm run build
 npm run smoke:mock     # mock only
-npm run smoke:modal         # client → deployed Modal API
+npm run smoke:modal         # client.ts → Modal API → real R2 video_url (~10–25 min)
 npm run measure:start-job   # timing vs upload size (Modal)
 ```
 
@@ -64,9 +64,9 @@ Project: **automatic-karaoke** (root `frontend/`), linked to GitHub `main`.
 | `VITE_USE_MOCK` | `false` |
 | `VITE_API_URL` | `https://jacoblum22--karaoke-api.modal.run` |
 
-Live: https://automatic-karaoke.vercel.app — footer should show **Mock mode: off**.
+Live: https://automatic-karaoke.vercel.app — footer shows **Mock mode: off** and Modal API base URL.
 
-## Modal API (Phase 2)
+## Modal API (Phase 2+)
 
 ```powershell
 cd backend
@@ -74,7 +74,9 @@ modal deploy app.py
 # API: https://jacoblum22--karaoke-api.modal.run
 ```
 
-Smoke tests (repo root): `scripts/smoke_modal_deployed.py`, `scripts/smoke_job_durability.py`
+Requires Modal secret **`karaoke-r2`** for R2 upload + real `video_url`.
+
+Smoke tests (repo root): `scripts/smoke_pipeline_modal.py`, `scripts/smoke_phase6_step8.py --verify-only`
 
 ## Demucs (Phase 3) ✓
 
@@ -130,13 +132,19 @@ Manual render:
   --output scripts\output\psychosomatic\karaoke.mp4 --no-clip
 ```
 
-Bakes `psychosomatic/instrumental.wav` + `lyrics.json` into `_RENDER_IMAGE` at deploy. Stub orchestrator still returns `sample.mp4` until Phase 6. See [PHASE_5.md](docs/PHASE_5.md).
+Bakes psychosomatic stems into Modal images at deploy. See [PHASE_5.md](docs/PHASE_5.md).
 
-## Pipeline integration (Phase 6)
+## Pipeline integration (Phase 6) ✓
 
-Runbook: [PHASE_6.md](docs/PHASE_6.md) — wire Demucs → transcribe → render → R2, replace stub orchestrator, E2E API smoke.
+Runbook: [PHASE_6.md](docs/PHASE_6.md) — Demucs → Whisper (`large-v3`, VAD off) → render → R2 `video_url`.
 
-Prerequisites: R2 bucket + Modal secret; fix `start-job` to save upload before spawn.
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step8.py --verify-only
+cd frontend && npm run smoke:modal
+```
+
+Prerequisites: R2 bucket + Modal secret `karaoke-r2`; Vercel `VITE_USE_MOCK=false`, `VITE_API_URL` = Modal base.
 
 ## Project phases
 
@@ -148,7 +156,7 @@ Prerequisites: R2 bucket + Modal secret; fix `start-job` to save upload before s
 | 3 | Demucs isolation ✓ |
 | 4 | Whisper + WhisperX ✓ |
 | 5 | FFmpeg + ASS render (isolated) ✓ |
-| 6 | Full pipeline integration |
+| 6 | Full pipeline integration ✓ |
 | 7 | Hardening (upload, auth, performance) |
 
 ## License

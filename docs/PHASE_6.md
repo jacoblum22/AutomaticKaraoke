@@ -11,11 +11,13 @@
 
 | Status | Steps |
 |--------|--------|
-| Not started | **1–8** — see [step-by-step](#step-by-step-execution-order) |
+| Done | **1–8** ✓ (Step 8: verify production bundle; redeploy frontend for subtitle) |
 
-**Production today:** https://automatic-karaoke.vercel.app — stub pipeline returns `https://automatic-karaoke.vercel.app/sample.mp4`.
+**Production today:** https://automatic-karaoke.vercel.app — API runs full pipeline through R2 when secret `karaoke-r2` is configured.
 
-**Next after Phase 6:** [Phase 7 — Production hardening](./IMPLEMENTATION_PLAN.md#phase-7--production-hardening) — presigned uploads, `keep_warm`, observability.
+**Deployed API:** https://jacoblum22--karaoke-api.modal.run
+
+**Next after Phase 6:** [Phase 7 — Production hardening](./IMPLEMENTATION_PLAN.md#phase-7--production-hardening) — presigned uploads, `keep_warm`, observability, production R2 TTL.
 
 ---
 
@@ -105,6 +107,7 @@ After each stage that writes files, call `volume.commit()` so the next container
 
 ```text
 backend/
+├── job_storage.py           # Volume paths + write/commit helpers
 ├── orchestrator.py          # replace stub: run_real_pipeline(job_id)
 ├── storage.py               # implement upload_file → URL
 ├── web.py                   # save upload before spawn; optional max duration check
@@ -113,6 +116,7 @@ backend/
 └── .env.example             # document R2 secret keys (Modal Secret names)
 
 scripts/
+├── smoke_phase6_step1.py    # upload → Volume verify
 ├── smoke_pipeline_modal.py  # E2E: upload fixture → poll → assert real video_url
 └── smoke_phase6_step*.py    # optional granular gates (see below)
 
@@ -133,8 +137,8 @@ docs/
 | Setting | Value | Notes |
 |---------|--------|--------|
 | Demucs | `htdemucs`, `--two-stems=vocals` | Same as Phase 3 |
-| Whisper | `medium` or `large-v3` | Accuracy vs latency tradeoff |
-| `vad_filter` | `False` | Project default after Phase 5 experiments |
+| Whisper | `large-v3` | Production default (accuracy over latency) |
+| `vad_filter` | `False` | Project default — vocal stem already isolated |
 | Render | 1080p, ASS burn-in | Phase 5 `render_karaoke` |
 
 ---
@@ -151,13 +155,21 @@ Create a Modal secret (example name `karaoke-r2`):
 | `R2_ENDPOINT_URL` | e.g. `https://<account>.r2.cloudflarestorage.com` |
 | `R2_PUBLIC_BASE_URL` | Optional CDN/public base for `video_url` |
 
-Wire secret on orchestrator and/or `storage.py` functions:
+Wire secret on pipeline functions after the secret exists (or link **karaoke-r2** to the `karaoke` app in the Modal dashboard):
 
 ```python
-@app.function(secrets=[modal.Secret.from_name("karaoke-r2")], ...)
+R2_SECRET = modal.Secret.from_name("karaoke-r2")
+
+@app.function(secrets=[R2_SECRET], ...)
+def run_real_pipeline(...):
+    ...
 ```
 
-**v1 fallback (dev only):** If R2 is not ready, document a temporary `video_url` strategy (e.g. Modal volume artifact URL) — **production exit requires R2 or stable HTTPS delivery**.
+`app.py` wires `secrets=[R2_SECRET]` on `run_real_pipeline` and R2 smokes after the secret exists (create/link **karaoke-r2** in Modal before deploy).
+
+**v1 fallback (dev only):** If R2 is not ready, document a temporary `video_url` strategy (e.g. Modal volume download endpoint) — **production uses R2 public URLs**.
+
+**Smoke cleanup:** Phase 6 smokes delete R2 objects and Volume job dirs when finished (`smoke_phase6_cleanup`). Production jobs are not auto-deleted.
 
 ---
 
@@ -175,13 +187,13 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] File exists at `/jobs/{job_id}/input.mp3` (or `.wav`) before pipeline starts
-- [ ] `job-status` stays `queued` until spawn begins
+- [x] File exists at `/jobs/{job_id}/input.mp3` (or `.wav`) before pipeline starts
+- [x] Upload drained and committed before `spawn_pipeline` (job stays `queued` until save completes)
 
 **First testable point:** persisted upload only.
 
 ```powershell
-# After implementing — example
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step1.py --deploy
 .\.venv\Scripts\python.exe scripts\smoke_phase6_step1.py
 ```
 
@@ -197,10 +209,14 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] Pipeline advances Dict statuses in order (even if stages no-op initially)
-- [ ] Simulated exception → `failed` + `error` message
+- [x] Pipeline advances Dict statuses in order (even if stages no-op initially)
+- [x] Simulated exception → `failed` + `error` message
 
 **Second testable point:** job lifecycle without ML.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step2.py --deploy
+```
 
 ---
 
@@ -214,10 +230,14 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] One job produces stems on Volume
-- [ ] Durations match input (± padding)
+- [x] One job produces stems on Volume
+- [x] Durations match input (± padding)
 
 **Third testable point:** separation inside pipeline.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step3.py --deploy
+```
 
 ---
 
@@ -231,10 +251,14 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] `lyrics.json` exists and passes contract
-- [ ] Failed transcribe → job `failed` (no render)
+- [x] `lyrics.json` exists and passes contract
+- [x] Failed transcribe → job `failed` (no render) — `simulate_fail` before Whisper remote
 
 **Fourth testable point:** lyrics on Volume.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step4.py --deploy
+```
 
 ---
 
@@ -248,10 +272,14 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] MP4 plays locally if copied from Volume (optional manual)
-- [ ] Render failure → job `failed`
+- [x] MP4 plays locally if copied from Volume (optional manual)
+- [x] Render failure → job `failed`
 
 **Fifth testable point:** MP4 on Volume without R2.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step5.py --deploy
+```
 
 ---
 
@@ -265,10 +293,18 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] URL is HTTPS and downloadable
-- [ ] `GET /job-status` returns `done` + real URL (not `sample.mp4`)
+- [x] URL is HTTPS and downloadable
+- [x] Pipeline sets `done` + real URL (not `sample.mp4`)
 
 **Sixth testable point:** deliverable URL.
+
+```powershell
+# Create secret once: modal secret create karaoke-r2 R2_ACCESS_KEY_ID=... ...
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step6.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step6.py --upload-only
+```
+
+Smokes verify the URL from your machine (r2.dev often blocks Modal egress) and **delete the R2 object** when done.
 
 ---
 
@@ -282,9 +318,9 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] One real song completes via API only (curl or script)
-- [ ] Total time **&lt; 90s** on warm T4 for ~3 min song (target; log actual)
-- [ ] Failed Demucs does not leave orphan `done` status
+- [x] One real song completes via API only (curl or script)
+- [ ] Total time **&lt; 90s** on warm T4 for ~3 min song (target; **153s** logged on cold run with Psychosomatic — acceptable for v1)
+- [x] Failed Demucs does not leave orphan `done` status (orchestrator sets `failed` on exception)
 
 **Seventh testable point:** full stack without manual steps.
 
@@ -292,6 +328,8 @@ Complete in order. Each **Gate** must pass before the next step.
 .\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py --deploy
 .\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py
 ```
+
+Uses ``Psychosomatic.mp3`` by default (real vocals; ~10–25 min wall time on cold GPU). Cleans up R2 + Volume after verify.
 
 ---
 
@@ -306,10 +344,23 @@ Complete in order. Each **Gate** must pass before the next step.
 
 **Gate:**
 
-- [ ] Browser upload → progress stages → real karaoke video
-- [ ] Phase 6 checklist complete
+- [x] Browser upload → progress stages → real karaoke video (verified via Step 7 + client smoke; manual on Vercel after deploy)
+- [x] Phase 6 checklist complete
 
 **Eighth testable point:** user-visible karaoke on the live site.
+
+```powershell
+# Fast — live Vercel bundle uses Modal API (not mock)
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step8.py --verify-only
+
+# Full — same path as the React duplicates (client.ts → Modal → R2), ~10–25 min
+cd frontend
+npm run smoke:modal
+cd ..
+.\.venv\Scripts\python.exe scripts\smoke_phase6_step8.py --full
+```
+
+After `App.tsx` subtitle change, **redeploy frontend** (`git push main` or `vercel --prod` from `frontend/`) so https://automatic-karaoke.vercel.app shows the updated copy.
 
 ---
 
@@ -319,28 +370,28 @@ Complete in order. Each **Gate** must pass before the next step.
 
 ### Pipeline
 
-- [ ] Upload persisted before pipeline spawn
-- [ ] `run_real_pipeline` calls separate → transcribe → render in order
-- [ ] Shared Volume (or equivalent) across stages
-- [ ] Failures set `status=failed` with `error`; no false `done`
+- [x] Upload persisted before pipeline spawn
+- [x] `run_real_pipeline` calls separate → transcribe → render in order
+- [x] Shared Volume (or equivalent) across stages
+- [x] Failures set `status=failed` with `error`; no false `done`
 
 ### Storage & API
 
-- [ ] `storage.py` uploads MP4 to R2 (or documented production URL strategy)
-- [ ] `video_url` on completed jobs is the generated karaoke file
-- [ ] `smoke_pipeline_modal.py` passes on deployed app
+- [x] `storage.py` uploads MP4 to R2 (or documented production URL strategy)
+- [x] `video_url` on completed jobs is the generated karaoke file
+- [x] `smoke_pipeline_modal.py` passes on deployed app
 
 ### Performance (reference)
 
-- [ ] Log wall time per stage + total for ~3 min song
-- [ ] Warm GPU path meets or documents gap vs &lt;90s target
+- [x] Log wall time per stage + total for ~3 min song (Step 7 smoke logs total wall time)
+- [ ] Warm GPU path meets or documents gap vs &lt;90s target (153s cold; Phase 7 `keep_warm`)
 
 ### Explicitly NOT done (confirm)
 
-- [ ] No presigned browser → R2 upload (still multipart to Modal)
-- [ ] No auth / rate limits
-- [ ] No `keep_warm` (Phase 7)
-- [ ] Lyric text accuracy not re-opened (Phase 4 concern)
+- [x] No presigned browser → R2 upload (still multipart to Modal)
+- [x] No auth / rate limits
+- [x] No `keep_warm` (Phase 7)
+- [x] Lyric text accuracy not re-opened (Phase 4 concern)
 
 ---
 
@@ -368,6 +419,7 @@ Phase 6 is **complete** when:
 | R2 403 / wrong URL | Secret keys, bucket CORS, `R2_PUBLIC_BASE_URL` |
 | Lyrics wrong in video | Phase 4 ASR — not orchestrator; tune model separately |
 | Cold start &gt;90s | Expected first run; Phase 7 `keep_warm`; log per-stage times |
+| `sample_30s.mp3` in Step 7 E2E | Whisper fails (tone, no speech) | Use `Psychosomatic.mp3` (default in `smoke_pipeline_modal.py`) |
 | CORS on `video_url` | R2 public access or CDN; separate from Modal API CORS |
 
 ---
@@ -408,7 +460,7 @@ def run_real_pipeline(job_id: str) -> None:
             str(work / "vocals.wav"),
             str(work / "lyrics.json"),
             clip_end=None,
-            model_size="medium",
+            model_size="large-v3",
         )
 
         update_job(job_id, status="rendering", progress=80, message="Rendering karaoke video…")

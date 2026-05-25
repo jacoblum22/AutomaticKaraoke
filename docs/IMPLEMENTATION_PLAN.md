@@ -282,9 +282,11 @@ Each phase has **entry criteria**, **tasks**, **verification**, and **exit crite
 
 ---
 
-### Phase 6 — Integrate ML into backend (still no full UI polish)
+### Phase 6 — Integrate ML into backend ✓
 
 **Detailed runbook:** [PHASE_6.md](./PHASE_6.md) — Volume per job, real orchestrator, R2 `video_url`, E2E API smoke.
+
+**Status:** Complete — production uses `run_real_pipeline` on Modal (T4 GPU), R2 delivery, Vercel frontend with `VITE_USE_MOCK=false`.
 
 **Entry criteria:** [Phase 5](./PHASE_5.md#exit-criteria--phase-7) exit; R2 bucket + Modal secret ready.
 
@@ -293,24 +295,24 @@ Wire real functions into the orchestrator from Phase 2:
 ```text
 start-job
   → separate(audio) → vocals.wav, instrumental.wav
-  → transcribe(vocals) → faster-whisper → WhisperX align → lyrics.json
+  → transcribe(vocals) → faster-whisper (large-v3, vad off) → WhisperX align → lyrics.json
   → render(instrumental, lyrics)
-  → upload MP4 → signed URL
+  → upload MP4 → R2 public URL
   → status = done
 ```
 
 | Concern | Approach |
 |---------|----------|
 | Ordering | Demucs **before** transcribe; alignment needs vocal stem + transcript |
-| Temp files | Modal Volume mounted at `/cache` per job (`vocals.wav`, `instrumental.wav`, `lyrics.json`) |
-| Failures | Set `failed` + `error`; partial cleanup |
-| Idempotency | Same `job_id` does not double-charge GPU (optional v2) |
+| Temp files | Modal Volume at `/jobs/{job_id}/` |
+| Failures | Set `failed` + `error`; smoke tests clean R2 + Volume |
+| Delivery | R2 `video_url`; frontend `<video src>` |
 
 **Verification checklist**
 
-- [ ] One real song completes via API only (curl or frontend)
-- [ ] Total time &lt; 90s on T4 for 3-min song (before warm containers)
-- [ ] Failed Demucs does not leave orphan “done” status
+- [x] One real song completes via API only (curl or frontend)
+- [ ] Total time &lt; 90s on T4 for 3-min song (153s cold logged; Phase 7 `keep_warm`)
+- [x] Failed pipeline does not leave orphan “done” status
 
 **Exit:** [PHASE_6 checklist](./PHASE_6.md#phase-6-completion-checklist); `POST /start-job` returns real karaoke MP4 URL.
 

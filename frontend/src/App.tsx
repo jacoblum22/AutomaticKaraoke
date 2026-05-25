@@ -88,7 +88,7 @@ function App() {
         <p className="app__subtitle">
           {isMockMode()
             ? "Upload a song — mock pipeline (Phase 1)"
-            : "Upload a song — Modal stub API (Phase 2)"}
+            : "Upload a song — Demucs, Whisper, and render on Modal (GPU)"}
         </p>
       </header>
 

@@ -12,7 +12,7 @@ from typing import Any, TypedDict
 
 import torch as th
 
-DEFAULT_MODEL_SIZE = "medium"
+DEFAULT_MODEL_SIZE = "large-v3"
 DEFAULT_LANGUAGE = "en"
 DEFAULT_VAD_FILTER = False
 SEGMENT_TIME_TOLERANCE_S = 0.15

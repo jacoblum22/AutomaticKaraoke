@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from jobs import create_job, get_job
+from jobs import create_job, get_job, set_failed
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
@@ -55,8 +55,13 @@ def _validate_upload(filename: str, content_type: str | None, size: int) -> None
 def create_api(
     *,
     spawn_pipeline: Any,
+    jobs_volume: Any | None = None,
 ) -> FastAPI:
-    """Build FastAPI app; spawn_pipeline(job_id) starts background work."""
+    """Build FastAPI app; spawn_pipeline(job_id) starts background work.
+
+    When ``jobs_volume`` is set (Modal), uploads are persisted under
+    ``/jobs/{job_id}/input.*`` before the pipeline is spawned.
+    """
     api = FastAPI(title="Automatic Karaoke API", docs_url="/docs")
 
     api.add_middleware(
@@ -72,28 +77,60 @@ def create_api(
     async def start_job(audio: UploadFile = File(...)) -> dict[str, str]:
         # Validate type from headers; size from Content-Length when present.
         declared = audio.size or 0
-        _validate_upload(audio.filename or "upload", audio.content_type, declared)
+        filename = audio.filename or "upload"
+        _validate_upload(filename, audio.content_type, declared)
+
+        if jobs_volume is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Job storage not configured on this server",
+            )
 
         job_id = str(uuid.uuid4())
         create_job(job_id)
-        spawn_pipeline(job_id)
 
-        # Phase 2 stub ignores audio bytes; drain in chunks (not one big read).
+        # Phase 6: persist upload before pipeline reads it (stay queued until spawn).
+        chunks: list[bytes] = []
         total = 0
-        while True:
-            chunk = await audio.read(1024 * 1024)
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > MAX_UPLOAD_BYTES:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)",
-                )
+        try:
+            while True:
+                chunk = await audio.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"File too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
+                        ),
+                    )
+                chunks.append(chunk)
 
-        if declared == 0 and total > 0:
-            _validate_upload(audio.filename or "upload", audio.content_type, total)
+            if declared == 0 and total > 0:
+                _validate_upload(filename, audio.content_type, total)
 
+            from job_storage import write_job_input_stream
+
+            dest, written = write_job_input_stream(
+                job_id,
+                filename,
+                audio.content_type,
+                chunks,
+                volume=jobs_volume,
+            )
+            print(
+                f"JOB_INPUT job_id={job_id} path={dest} bytes={written}",
+                flush=True,
+            )
+        except HTTPException:
+            set_failed(job_id, "Upload rejected")
+            raise
+        except Exception as exc:
+            set_failed(job_id, f"Upload save failed: {exc}")
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+        spawn_pipeline(job_id)
         return {"job_id": job_id}
 
     @api.get("/job-status")
