@@ -1,8 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   API_BASE,
   finalizeJob,
+  getApiConfig,
   getJobStatus,
+  hasClientApiKey,
   isMockMode,
   startJob,
 } from "./api/client";
@@ -20,6 +22,25 @@ function App() {
   const [startError, setStartError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [configWarning, setConfigWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isMockMode()) return;
+    void getApiConfig()
+      .then((cfg) => {
+        if (cfg.api_key_required && !hasClientApiKey()) {
+          setConfigWarning(
+            "Modal requires an API key, but this Vercel build has no VITE_API_KEY. " +
+              "In Vercel: set VITE_API_KEY (not Sensitive), then redeploy with cache cleared."
+          );
+        } else {
+          setConfigWarning(null);
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  }, []);
 
   const processing =
     busy ||
@@ -126,14 +147,25 @@ function App() {
         )}
       </section>
 
+      {configWarning && (
+        <p className="app__error app__config-warning" role="alert">
+          {configWarning}
+        </p>
+      )}
+
       <footer className="app__footer">
         <p>
           Mock mode: <code>{isMockMode() ? "on" : "off"}</code>
         </p>
         {!isMockMode() && (
-          <p>
-            API: <code>{API_BASE}</code>
-          </p>
+          <>
+            <p>
+              API: <code>{API_BASE}</code>
+            </p>
+            <p>
+              Client API key: <code>{hasClientApiKey() ? "set" : "missing"}</code>
+            </p>
+          </>
         )}
       </footer>
     </main>
