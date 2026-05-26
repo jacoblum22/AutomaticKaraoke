@@ -22,6 +22,7 @@ app = modal.App("karaoke")
 JOBS_VOL = jobs_volume()
 
 R2_SECRET = modal.Secret.from_name("karaoke-r2")
+API_KEY_SECRET = modal.Secret.from_name("karaoke-api-key")
 
 _BACKEND_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _BACKEND_DIR.parent
@@ -221,7 +222,11 @@ def _poll_job_skeleton(
 # --- Phase 2 Step 3 — HTTP API ---
 
 
-@app.function(image=_BACKEND_IMAGE, volumes={JOBS_MOUNT: JOBS_VOL})
+@app.function(
+    image=_BACKEND_IMAGE,
+    volumes={JOBS_MOUNT: JOBS_VOL},
+    secrets=[R2_SECRET, API_KEY_SECRET],
+)
 @modal.asgi_app(label="karaoke-api")
 def karaoke_api():
     from web import create_api
@@ -1154,3 +1159,231 @@ def smoke_phase6_skeleton_fail() -> str:
     delete_job(job_id)
     print(f"JOB_ID={job_id}", flush=True)
     return job_id
+
+
+# --- Phase 7 Step 4 — TTL cleanup (R2, Volume, Dict) ---
+
+
+@app.function(
+    image=_BACKEND_IMAGE,
+    volumes={JOBS_MOUNT: JOBS_VOL},
+    secrets=[R2_SECRET],
+    schedule=modal.Period(hours=6),
+)
+def cleanup_expired_jobs(max_age_hours: int = 24) -> dict:
+    """Scheduled sweep of jobs older than ``max_age_hours`` (default 24h)."""
+    from cleanup import cleanup_expired_jobs as _cleanup_expired_jobs
+
+    return _cleanup_expired_jobs(volume=JOBS_VOL, max_age_hours=max_age_hours)
+
+
+@app.function(image=_BACKEND_IMAGE, volumes={JOBS_MOUNT: JOBS_VOL}, secrets=[R2_SECRET])
+def smoke_phase7_cleanup_gate(max_age_seconds: int = 60) -> dict:
+    """Seed expired + fresh jobs; run cleanup; verify artifacts and Dict rows."""
+    from datetime import datetime, timedelta, timezone
+
+    from cleanup import cleanup_expired_jobs as _cleanup_expired_jobs
+    from job_storage import find_job_input, job_dir, write_job_input
+    from storage import karaoke_mp4_exists, upload_karaoke_mp4
+
+    mp4_fixture = Path("/fixtures/karaoke_smoke.mp4")
+    audio_fixture = Path("/fixtures/sample_30s.mp3")
+    if not audio_fixture.is_file():
+        raise FileNotFoundError(f"fixture missing in image: {audio_fixture}")
+
+    now = datetime.now(timezone.utc)
+    expired_at = (now - timedelta(hours=25)).isoformat()
+    fresh_at = now.isoformat()
+
+    expired_id = str(uuid.uuid4())
+    create_job(expired_id)
+    update_job(
+        expired_id,
+        status="done",
+        progress=100,
+        message="Done",
+        created_at=expired_at,
+        video_url="https://example.invalid/smoke",
+    )
+    write_job_input(
+        expired_id,
+        "sample_30s.mp3",
+        "audio/mpeg",
+        audio_fixture.read_bytes(),
+        volume=JOBS_VOL,
+    )
+    if mp4_fixture.is_file():
+        upload_karaoke_mp4(mp4_fixture, expired_id)
+    print(f"EXPIRED_JOB_ID={expired_id}", flush=True)
+
+    fresh_id = str(uuid.uuid4())
+    create_job(fresh_id, is_draft=True)
+    update_job(fresh_id, created_at=fresh_at)
+    write_job_input(
+        fresh_id,
+        "sample_30s.mp3",
+        "audio/mpeg",
+        audio_fixture.read_bytes(),
+        volume=JOBS_VOL,
+    )
+    print(f"FRESH_JOB_ID={fresh_id}", flush=True)
+
+    summary = _cleanup_expired_jobs(
+        volume=JOBS_VOL,
+        max_age_hours=24,
+        max_age_seconds=max_age_seconds,
+    )
+    if expired_id not in summary.get("deleted", []):
+        raise RuntimeError(
+            f"expected expired job in deleted list: {summary.get('deleted')}"
+        )
+    if fresh_id in summary.get("deleted", []):
+        raise RuntimeError("fresh job must not be deleted")
+
+    if get_job(expired_id) is not None:
+        raise RuntimeError(f"expired Dict row still present: {expired_id}")
+    if get_job(fresh_id) is None:
+        raise RuntimeError(f"fresh Dict row missing: {fresh_id}")
+
+    JOBS_VOL.reload()
+    if find_job_input(expired_id) is not None:
+        raise RuntimeError(f"expired Volume input still present: {expired_id}")
+    if find_job_input(fresh_id) is None:
+        raise RuntimeError(f"fresh Volume input missing: {fresh_id}")
+    if job_dir(expired_id).is_dir():
+        raise RuntimeError(f"expired workspace dir still present: {expired_id}")
+
+    if mp4_fixture.is_file() and karaoke_mp4_exists(expired_id):
+        raise RuntimeError(f"expired R2 object still present: {expired_id}")
+
+    from cleanup import delete_job_artifacts
+
+    delete_job_artifacts(fresh_id, JOBS_VOL, r2=True)
+    print(f"JOB_ID={fresh_id}", flush=True)
+    return {
+        "expired_job_id": expired_id,
+        "fresh_job_id": fresh_id,
+        "cleanup": summary,
+    }
+
+
+# --- Phase 7 Step 5 — rate limiting ---
+
+
+@app.function(image=_BACKEND_IMAGE)
+def smoke_phase7_rate_limit_reset() -> int:
+    """Clear all rate-limit Dict entries (smoke setup/teardown)."""
+    from rate_limit import reset_all_rate_limits
+
+    removed = reset_all_rate_limits()
+    print(f"RATE_LIMIT_RESET count={removed}", flush=True)
+    return removed
+
+
+@app.function(image=_BACKEND_IMAGE)
+def smoke_phase7_rate_limit_module() -> None:
+    """Module gate: sixth consume in the same window raises RateLimitExceeded."""
+    from rate_limit import (
+        RateLimitExceeded,
+        consume_job_start_slot,
+        reset_rate_limit,
+    )
+
+    test_ip = "smoke-module-test"
+    reset_rate_limit(test_ip)
+    for _ in range(5):
+        consume_job_start_slot(test_ip, limit=5, window_s=3600)
+    try:
+        consume_job_start_slot(test_ip, limit=5, window_s=3600)
+    except RateLimitExceeded:
+        print("RATE_LIMIT_MODULE_OK", flush=True)
+        reset_rate_limit(test_ip)
+        return
+    raise RuntimeError("expected RateLimitExceeded on 6th consume")
+
+
+# --- Phase 7 Step 6 — presigned R2 upload smoke ---
+
+
+@app.function(
+    image=_BACKEND_IMAGE,
+    volumes={JOBS_MOUNT: JOBS_VOL},
+    secrets=[R2_SECRET, API_KEY_SECRET],
+)
+def smoke_phase7_r2_upload_gate() -> dict:
+    """Presigned PUT → sync-upload → input on Volume (no HTTP / pipeline)."""
+    from job_storage import find_job_input
+    from storage import (
+        StorageError,
+        presigned_put_upload,
+        r2_configured,
+        upload_object_exists,
+    )
+
+    if not r2_configured():
+        raise RuntimeError("R2 is not configured")
+
+    fixture = Path("/fixtures/sample_30s.mp3")
+    if not fixture.is_file():
+        raise FileNotFoundError(f"fixture missing in image: {fixture}")
+
+    job_id = str(uuid.uuid4())
+    create_job(job_id, is_draft=True)
+    data = fixture.read_bytes()
+    content_type = "audio/mpeg"
+
+    payload = presigned_put_upload(
+        job_id,
+        filename="sample_30s.mp3",
+        content_type=content_type,
+        size=len(data),
+        max_bytes=50 * 1024 * 1024,
+    )
+    update_job(job_id, r2_upload_key=payload["object_key"])
+
+    import urllib.request
+
+    req = urllib.request.Request(
+        payload["upload_url"],
+        data=data,
+        method="PUT",
+        headers={"Content-Type": content_type},
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        if resp.status not in (200, 201, 204):
+            raise RuntimeError(f"presigned PUT failed: HTTP {resp.status}")
+
+    if not upload_object_exists(payload["object_key"]):
+        raise RuntimeError("upload missing in R2 after PUT")
+
+    from web import _ingest_r2_upload  # noqa: PLC2701
+
+    _ingest_r2_upload(job_id, jobs_volume=JOBS_VOL, object_key=payload["object_key"])
+    JOBS_VOL.reload()
+    if find_job_input(job_id) is None:
+        raise RuntimeError("input not on Volume after sync")
+
+    from cleanup import delete_job_artifacts
+
+    delete_job_artifacts(
+        job_id,
+        JOBS_VOL,
+        r2=True,
+        r2_upload_key=payload["object_key"],
+    )
+    print(f"JOB_ID={job_id}", flush=True)
+    print("R2_UPLOAD_GATE_OK", flush=True)
+    return {"job_id": job_id, "object_key": payload["object_key"]}
+
+
+# --- Phase 7 Step 7 — API key smoke ---
+
+
+@app.function(image=_BACKEND_IMAGE, secrets=[API_KEY_SECRET])
+def smoke_phase7_auth_status() -> dict:
+    """Report whether API_KEY is configured in the container."""
+    from auth import api_key_configured
+
+    configured = api_key_configured()
+    print(f"API_KEY_CONFIGURED={configured}", flush=True)
+    return {"api_key_configured": configured}

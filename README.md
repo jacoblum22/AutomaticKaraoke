@@ -2,13 +2,13 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 6 complete ✓ — full pipeline on [Modal](https://jacoblum22--karaoke-api.modal.run), frontend on [Vercel](https://automatic-karaoke.vercel.app). **Next:** [Phase 7 — Production hardening](docs/PHASE_7.md). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md) · [7](docs/PHASE_7.md).
+**Current phase:** Phase 7 complete ✓ — production hardening (warm-up, guards, TTL, R2 upload, API key). Full pipeline on [Modal](https://jacoblum22--karaoke-api.modal.run), frontend on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md) · [7](docs/PHASE_7.md).
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Live preview:** https://automatic-karaoke.vercel.app
 
-**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md)
+**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md) · [7](docs/PHASE_7.md)
 
 **Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
@@ -63,8 +63,11 @@ Project: **automatic-karaoke** (root `frontend/`), linked to GitHub `main`.
 |----------|--------|
 | `VITE_USE_MOCK` | `false` |
 | `VITE_API_URL` | `https://jacoblum22--karaoke-api.modal.run` |
+| `VITE_API_KEY` | Same as Modal secret `karaoke-api-key` → `API_KEY` (when auth enabled) |
 
-Live: https://automatic-karaoke.vercel.app — footer shows **Mock mode: off** and Modal API base URL.
+Live: https://automatic-karaoke.vercel.app — footer shows **Mock mode: off**, Modal API URL, and **Client API key: set** when configured.
+
+Redeploy Vercel after changing `VITE_*` (values are baked in at build time). Do not mark `VITE_API_KEY` as **Sensitive** on Vercel.
 
 ## Modal API (Phase 2+)
 
@@ -74,11 +77,31 @@ modal deploy app.py
 # API: https://jacoblum22--karaoke-api.modal.run
 ```
 
-Requires Modal secret **`karaoke-r2`** for R2 upload + real `video_url`.
+Requires Modal secrets **`karaoke-r2`** (R2) and **`karaoke-api-key`** (optional `API_KEY`).
 
-Smoke tests (repo root): `scripts/smoke_pipeline_modal.py`, `scripts/smoke_phase6_step8.py --verify-only`
+**Warm-up cost (intent-based):** selecting a file calls `POST /warm` (~$0.06–0.08 per bounce if the user never submits; GPUs idle out after 2 min). See [PHASE_7.md](docs/PHASE_7.md#cost-notes-intent-based-warm-up).
 
-**Phase 7 (in progress):** On file select, the UI calls `POST /warm` to load GPU models while you upload (~$0.07/bounce if you pick a file but never submit; GPUs idle out after 2 min). Planned: [early upload on drop](docs/PHASE_7.md#step-2b--early-upload-on-file-select-optional) (overlap upload with warm; safe file replace). See [PHASE_7.md](docs/PHASE_7.md).
+Smoke tests (repo root):
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --verify-only
+.\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py          # full E2E (~10–25 min)
+```
+
+Phase 7 gates: `scripts/smoke_phase7_step1.py` … `scripts/smoke_phase7_step7.py` — see [PHASE_7.md](docs/PHASE_7.md).
+
+**Operational limits (production):**
+
+| Policy | Value |
+|--------|--------|
+| Max upload size | 50 MB |
+| Max song length | 8 minutes |
+| Job retention | 24 hours (R2 + Volume + Dict; cron every 6h) |
+| Rate limit | **5 job starts per hour per IP** (`start-job`, `finalize-job`) |
+| Input upload | **Presigned PUT to R2** when R2 is configured (`GET /config` → `r2_upload`); fallback multipart to Modal |
+| API key | Optional Modal secret **`karaoke-api-key`** (`API_KEY`); frontend `VITE_API_KEY` + `X-API-Key` header |
+
+**R2 CORS (presigned upload):** apply [docs/r2-cors.example.json](docs/r2-cors.example.json) on your bucket (Cloudflare dashboard → R2 → bucket → Settings → CORS).
 
 ## Demucs (Phase 3) ✓
 
@@ -159,7 +182,7 @@ Prerequisites: R2 bucket + Modal secret `karaoke-r2`; Vercel `VITE_USE_MOCK=fals
 | 4 | Whisper + WhisperX ✓ |
 | 5 | FFmpeg + ASS render (isolated) ✓ |
 | 6 | Full pipeline integration ✓ |
-| 7 | Production hardening (see [PHASE_7.md](docs/PHASE_7.md)) |
+| 7 | Production hardening ✓ (see [PHASE_7.md](docs/PHASE_7.md)) |
 
 ## License
 

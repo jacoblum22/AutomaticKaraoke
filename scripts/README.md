@@ -84,6 +84,25 @@ python scripts/copy_psychosomatic_fixture.py
 python scripts/smoke_phase3_step7.py
 python scripts/smoke_phase3_step7.py --modal-only
 
+# Phase 7 Step 4 — TTL cleanup (R2 + Volume + Dict; requires karaoke-r2 secret)
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step4.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step4.py
+# Phase 7 Step 5 — rate limit (429 after 5 job starts / hour / IP)
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step5.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step5.py
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step5.py --skip-upload
+# Phase 7 Step 6 — presigned R2 upload (karaoke-r2 + R2 CORS for browser)
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step6.py --deploy
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step6.py
+# Phase 7 Step 7 — API key (create Modal secret karaoke-api-key; set KARAOKE_API_KEY for HTTP test)
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step7.py --deploy
+$env:KARAOKE_API_KEY="your-key"; .\.venv\Scripts\python.exe scripts\smoke_phase7_step7.py
+# Modal smokes capture CLI output (no mount tree). Full log: $env:SMOKE_MODAL_VERBOSE="1"
+# Phase 7 Step 8 — sign-off (verify-only ~30s; --full adds pipeline + isolation)
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --verify-only
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --api
+.\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --full
+
 # Phase 2 — Modal job store (requires modal CLI + auth)
 python scripts/smoke_jobs_dict.py
 

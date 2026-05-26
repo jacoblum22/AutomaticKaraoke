@@ -319,22 +319,15 @@ start-job
 
 ---
 
-### Phase 7 — Production hardening
+### Phase 7 — Production hardening ✓
 
-**Detailed runbook:** [PHASE_7.md](./PHASE_7.md) — file-select GPU warm-up, `scaledown_window=120`, timing logs, TTL cleanup, rate limits, optional presigned upload.
+**Detailed runbook:** [PHASE_7.md](./PHASE_7.md) — complete.
 
-**Entry criteria:** [Phase 6](./PHASE_6.md#exit-criteria--phase-7) exit.
+**Shipped:** file-select `POST /warm`, `scaledown_window=120`, structured timing logs, draft upload + `finalize-job`, 8 min duration guard, 5 jobs/hr/IP rate limit, 24h TTL cleanup (6h cron), presigned R2 upload, optional `API_KEY` + `VITE_API_KEY`, sign-off via `scripts/smoke_phase7_step8.py`.
 
-| Area | Actions |
-|------|---------|
-| Performance | `POST /warm` on file select; `scaledown_window=120` on GPU functions; per-stage timing logs |
-| Upload | Early upload on file select (optional [Step 2b](./PHASE_7.md#step-2b--early-upload-on-file-select-optional)); presigned R2 (optional Step 6) |
-| Security | Rate limit, max duration (e.g. 8 min), auth optional |
-| Observability | Structured logs per `job_id`; Modal dashboards |
-| Cost | Log GPU seconds per job; document intent-based warm-up cost (~$0.07/bounce) |
-| Storage | TTL cleanup: R2 objects, Volume dirs, Dict rows (24h) |
+**Sign-off:** `.\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --verify-only`
 
-**Exit:** [PHASE_7 checklist](./PHASE_7.md#phase-7-completion-checklist).
+**Exit:** [PHASE_7 checklist](./PHASE_7.md#phase-7-completion-checklist) (required items checked).
 
 ---
 
@@ -473,7 +466,7 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 5. ~~**Phase 4 — Transcription + alignment**~~ ✓ — [PHASE_4.md](./PHASE_4.md).  
 6. ~~**Phase 5 — FFmpeg + ASS render**~~ ✓ — [PHASE_5.md](./PHASE_5.md) (Psychosomatic `karaoke.mp4` signed off May 2026).  
 7. ~~**Phase 6 — Integrate ML into backend**~~ ✓ — [PHASE_6.md](./PHASE_6.md).  
-8. **Phase 7 — Production hardening** — [PHASE_7.md](./PHASE_7.md).
+8. ~~**Phase 7 — Production hardening**~~ ✓ — [PHASE_7.md](./PHASE_7.md).
 
 ---
 

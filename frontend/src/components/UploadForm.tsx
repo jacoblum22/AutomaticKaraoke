@@ -10,7 +10,7 @@ import {
   createDraftJob,
   deleteDraftJob,
   isMockMode,
-  uploadDraftFile,
+  uploadDraftAudio,
   warmIfNeeded,
 } from "../api/client";
 import {
@@ -84,7 +84,7 @@ export function UploadForm({ disabled = false, onSubmit }: Props) {
         const abort = new AbortController();
         uploadAbortRef.current = abort;
 
-        await uploadDraftFile(job_id, file, {
+        await uploadDraftAudio(job_id, file, {
           signal: abort.signal,
           onProgress: (pct) => {
             if (generation === selectGenerationRef.current) {

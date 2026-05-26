@@ -32,6 +32,9 @@ class JobRecord(TypedDict, total=False):
     created_at: str
     stage_timings: dict[str, float]
     is_draft: bool
+    r2_upload_key: str
+    upload_content_type: str
+    upload_filename: str
 
 
 def _utc_now_iso() -> str:
@@ -87,3 +90,13 @@ def delete_job(job_id: str) -> bool:
         return True
     except KeyError:
         return False
+
+
+def iter_jobs() -> list[tuple[str, JobRecord]]:
+    """Return all ``(job_id, record)`` pairs from the shared Dict."""
+    pairs: list[tuple[str, JobRecord]] = []
+    for job_id in JOBS.keys():
+        raw = JOBS.get(job_id)
+        if raw is not None:
+            pairs.append((str(job_id), dict(raw)))
+    return pairs

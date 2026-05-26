@@ -14,8 +14,6 @@ from __future__ import annotations
 import argparse
 import io
 import json
-import os
-import subprocess
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -24,16 +22,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND = REPO_ROOT / "backend"
 MODAL_FN = "app.py::smoke_phase7_stage_logs"
 
-
-def _modal_cmd() -> list[str]:
-    venv_modal = REPO_ROOT / ".venv" / "Scripts" / "modal.exe"
-    if venv_modal.is_file():
-        return [str(venv_modal)]
-    return [sys.executable, "-m", "modal"]
-
-
-def _utf8_env() -> dict[str, str]:
-    return {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from smoke_modal import modal_output_text, run_modal, run_modal_deploy  # noqa: E402
 
 
 def test_log_job_event_local() -> None:
@@ -60,26 +50,13 @@ def test_log_job_event_local() -> None:
 
 
 def run_modal_smoke() -> dict:
-    cmd = [*_modal_cmd(), "run", MODAL_FN]
-    print("+", " ".join(cmd))
-    proc = subprocess.run(
-        cmd,
-        cwd=BACKEND,
-        check=False,
-        env=_utf8_env(),
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
-        sys.stderr.write(proc.stdout)
-        sys.stderr.write(proc.stderr)
-        raise SystemExit(proc.returncode)
+    proc = run_modal(MODAL_FN, cwd=BACKEND, root=REPO_ROOT)
 
     timings: dict[str, float] = {}
     job_id: str | None = None
     saw_pipeline_done = False
 
-    for raw_line in proc.stdout.splitlines():
+    for raw_line in modal_output_text(proc).splitlines():
         raw_line = raw_line.strip()
         if raw_line.startswith("JOB_ID="):
             job_id = raw_line.split("=", 1)[1]
@@ -100,19 +77,13 @@ def run_modal_smoke() -> dict:
     required = ("separating", "transcribing", "rendering")
     missing = [stage for stage in required if stage not in timings]
     if missing:
-        raise SystemExit(f"missing stage_end logs for {missing}; stdout:\n{proc.stdout}")
+        text = modal_output_text(proc)
+        raise SystemExit(f"missing stage_end logs for {missing}; stdout:\n{text}")
     if not saw_pipeline_done:
-        raise SystemExit(f"missing pipeline done log; stdout:\n{proc.stdout}")
+        text = modal_output_text(proc)
+        raise SystemExit(f"missing pipeline done log; stdout:\n{text}")
 
     return {"job_id": job_id or "?", "stage_timings": timings}
-
-
-def run_deploy() -> None:
-    cmd = [*_modal_cmd(), "deploy", "app.py"]
-    print("+", " ".join(cmd))
-    proc = subprocess.run(cmd, cwd=BACKEND, check=False, env=_utf8_env())
-    if proc.returncode != 0:
-        raise SystemExit(proc.returncode)
 
 
 def main() -> int:
@@ -135,7 +106,7 @@ def main() -> int:
         return 0
 
     if args.deploy:
-        run_deploy()
+        run_modal_deploy(REPO_ROOT)
 
     print("\n[2/2] modal run smoke_phase7_stage_logs …")
     result = run_modal_smoke()
