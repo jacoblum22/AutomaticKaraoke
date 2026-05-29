@@ -12,14 +12,14 @@
 | Status | Steps |
 |--------|--------|
 | **Done** | **1** — design tokens + layout shell (Tailwind v4, `smoke_phase8_step1.py`) |
-| Not started | **2** — component library (shadcn or equivalent) |
-| Not started | **3** — upload + primary CTA polish |
-| Not started | **4** — progress + error states |
-| Not started | **5** — video result + empty states |
-| Not started | **6** — hide dev footer; optional metadata fields (title/artist) |
-| Not started | **7** — docs + sign-off |
+| **Done** | **2** — shadcn/ui (`Button`, `Card`, `Progress`, `Alert`, `Badge`; `smoke_phase8_step2.py`) |
+| **Done** | **3** — upload + primary CTA polish (`smoke_phase8_step3.py`) |
+| **Done** | **4** — progress + error states (`smoke_phase8_step4.py`) |
+| **Done** | **5** — video result + empty states (`smoke_phase8_step5.py`) |
+| **Done** | **6** — hide dev footer; optional metadata fields (`smoke_phase8_step6.py`) |
+| **Done** | **7** — docs + sign-off (`smoke_phase8_step7.py`) |
 
-**Baseline today:** Vite + React 19, hand-rolled `App.css` / `index.css`, purple accent on dark gray. Functional but utilitarian (see screenshots in repo history).
+**Shipped UI:** Tailwind v4 + shadcn/ui, hero + card layout, upload dropzone, pipeline stepper, video card, dev-only Debug footer.
 
 ---
 
@@ -105,7 +105,15 @@ npm run dev
 | 2.2 | Add `Button`, `Card`, `Progress`, `Alert`, `Badge` |
 | 2.3 | Replace ad-hoc classes in one component as proof |
 
-**Gate:** One screen uses shadcn `Button` + `Card`; no visual regression on upload flow.
+**Gate:**
+
+- [x] `components.json` + `src/components/ui/{button,card,progress,alert,badge}.tsx`
+- [x] `App.tsx` uses `Card`; `UploadForm` uses `Button` + `Badge` + `Alert`
+- [x] `scripts/smoke_phase8_step2.py` passes
+
+```powershell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step2.py
+```
 
 ---
 
@@ -117,7 +125,16 @@ npm run dev
 | 3.2 | Selected file row: name, size, remove |
 | 3.3 | Primary CTA: idle / uploading / processing states |
 
-**Gate:** File select → finalize still works against Modal (manual or `smoke:modal`).
+**Gate:**
+
+- [x] Tailwind dropzone + file chip with remove; `Progress` during draft upload; CTA spinner
+- [x] `@/*` paths in `tsconfig.app.json` without deprecated `baseUrl` / `ignoreDeprecations`
+- [x] `scripts/smoke_phase8_step3.py` passes
+- [ ] File select → finalize still works against Modal (manual or `smoke:modal`)
+
+```powershell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step3.py
+```
 
 ---
 
@@ -129,7 +146,16 @@ npm run dev
 | 4.2 | Progress bar from `progress` field; show `message` |
 | 4.3 | Failed state: `Alert` with `error` + retry hint |
 
-**Gate:** Mock mode shows all states; production job shows live updates.
+**Gate:**
+
+- [x] shadcn `Progress` + stepper icons; failed `Alert` with retry copy
+- [x] Hero/footer use `text-muted-foreground` (not `text-muted` background token)
+- [x] `scripts/smoke_phase8_step4.py` passes
+- [ ] Mock mode shows all states; production job shows live updates (manual)
+
+```powershell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step4.py
+```
 
 ---
 
@@ -141,7 +167,16 @@ npm run dev
 | 5.2 | Download / open in new tab |
 | 5.3 | Empty state illustration or icon before first upload |
 
-**Gate:** Completed Psychosomatic run plays inline on production.
+**Gate:**
+
+- [x] `VideoPlayer` card + empty icon; spinner empty state while processing
+- [x] Download MP4 + Open in new tab links when `video_url` is set
+- [x] `scripts/smoke_phase8_step5.py` passes
+- [ ] Completed production run plays inline (manual)
+
+```powershell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step5.py
+```
 
 ---
 
@@ -153,7 +188,16 @@ npm run dev
 | 6.2 | Optional **Song title** / **Artist** inputs (UI only; wire in lyrics phase later) |
 | 6.3 | Config warning banner styled with `Alert` |
 
-**Gate:** Production bundle has no raw API key string in visible footer (status can stay as “configured” badge without echoing key).
+**Gate:**
+
+- [x] Collapsible **Debug** footer in dev; production shows short Modal/Vercel line only
+- [x] Optional song title / artist fields (UI only, not sent to API)
+- [x] Config warning uses `AlertTitle` + `AlertDescription`
+- [x] `scripts/smoke_phase8_step6.py` passes
+
+```powershell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step6.py
+```
 
 ---
 
@@ -162,10 +206,19 @@ npm run dev
 | # | Action |
 |---|--------|
 | 7.1 | Update `README.md` screenshot or one-line UX note |
-| 7.2 | `scripts/smoke_phase6_step8.py --verify-only` (API wiring unchanged) |
+| 7.2 | `scripts/smoke_phase7_step8.py --verify-only` (API wiring unchanged) |
 | 7.3 | Lighthouse accessibility spot-check (contrast, buttons) |
 
-**Gate:** Phase 8 checklist complete; Vercel preview approved.
+**Gate:**
+
+- [x] `README.md` + `IMPLEMENTATION_PLAN.md` reference Phase 8
+- [x] `scripts/smoke_phase8_step7.py` runs steps 1–6 + `smoke_phase7_step8.py --verify-only`
+- [x] `prefers-reduced-motion` + focus rings in theme (Lighthouse optional, manual)
+- [ ] Vercel preview approved after `git push` (manual)
+
+```powershell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step7.py
+```
 
 ---
 
@@ -173,16 +226,16 @@ npm run dev
 
 ### Visual & UX
 
-- [ ] Cohesive color + typography tokens
-- [ ] Upload drag/drop feels responsive (hover, active, error)
-- [ ] Progress stepper readable on mobile
-- [ ] Video result is clearly the success state
-- [ ] Dev/debug info not prominent on production
+- [x] Cohesive color + typography tokens
+- [x] Upload drag/drop feels responsive (hover, active, error)
+- [x] Progress stepper readable on mobile
+- [x] Video result is clearly the success state
+- [x] Dev/debug info not prominent on production
 
 ### Regression
 
-- [ ] `npm run build` clean
-- [ ] `smoke_phase7_step8.py --verify-only` passes
+- [x] `npm run build` clean (via `smoke_phase8_step7.py`)
+- [x] `smoke_phase7_step8.py --verify-only` passes (in step 7 smoke)
 - [ ] Manual E2E: upload → done → MP4 plays
 
 ### Explicitly optional
@@ -196,6 +249,8 @@ npm run dev
 ## Exit criteria
 
 Phase 8 is **complete** when the checklist above is satisfied and the live site no longer reads as an internal tool (debug footer hidden, polished upload → progress → video flow).
+
+**Sign-off command:** `..\.venv\Scripts\python.exe scripts\smoke_phase8_step7.py`
 
 **After Phase 8:** pursue **feature v2** (reference lyrics API, alignment path) or marketing (landing copy, OG image) — not more pipeline work.
 

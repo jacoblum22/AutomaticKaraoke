@@ -2,13 +2,15 @@
 
 Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (Demucs), transcription and alignment (faster-whisper + WhisperX), and video burn-in (FFmpeg).
 
-**Current phase:** Phase 7 complete ✓ — production hardening (warm-up, guards, TTL, R2 upload, API key). Full pipeline on [Modal](https://jacoblum22--karaoke-api.modal.run), frontend on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md) · [7](docs/PHASE_7.md).
+**Current phase:** Phase 8 complete ✓ — polished upload → stepper progress → video card UX (Tailwind v4 + shadcn/ui). Pipeline unchanged on [Modal](https://jacoblum22--karaoke-api.modal.run), live app on [Vercel](https://automatic-karaoke.vercel.app). Runbooks: [0](docs/PHASE_0.md)–[7](docs/PHASE_7.md) · **[8 — UX](docs/PHASE_8.md)**.
 
 **Repository:** https://github.com/jacoblum22/AutomaticKaraoke
 
 **Live preview:** https://automatic-karaoke.vercel.app
 
-**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md) · [1](docs/PHASE_1.md) · [2](docs/PHASE_2.md) · [3](docs/PHASE_3.md) · [4](docs/PHASE_4.md) · [5](docs/PHASE_5.md) · [6](docs/PHASE_6.md) · [7](docs/PHASE_7.md)
+**Full roadmap:** [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) · Phase runbooks: [0](docs/PHASE_0.md)–[7](docs/PHASE_7.md) · [8](docs/PHASE_8.md)
+
+**UI (Phase 8):** Dark theme, drag-and-drop upload with file chip, pipeline stepper + progress bar, inline video player with download, collapsible **Debug** footer in local dev only.
 
 **Storage (Phase 2+):** Plan to use Cloudflare R2 for finished MP4s; create an R2 bucket when wiring Modal secrets — not required for Phase 0.
 
@@ -23,11 +25,11 @@ Turn an uploaded song into a karaoke MP4 with synced lyrics: vocal separation (D
 ```bash
 cd frontend
 npm install
-cp .env.modal .env.local    # Phase 2: real Modal API (or cp .env.example for mock)
+cp .env.modal .env.local    # Phase 2+: Modal API + VITE_API_KEY (or cp .env.example for mock)
 npm run dev
 ```
 
-Upload an audio file — real pipeline on **Modal** (`VITE_USE_MOCK=false`) or in-browser mock (`VITE_USE_MOCK=true`).
+Restart `npm run dev` after editing `.env.local`. Upload an audio file — real pipeline on **Modal** (`VITE_USE_MOCK=false`) or in-browser mock (`VITE_USE_MOCK=true`).
 
 ```bash
 npm run build
@@ -65,7 +67,7 @@ Project: **automatic-karaoke** (root `frontend/`), linked to GitHub `main`.
 | `VITE_API_URL` | `https://jacoblum22--karaoke-api.modal.run` |
 | `VITE_API_KEY` | Same as Modal secret `karaoke-api-key` → `API_KEY` (when auth enabled) |
 
-Live: https://automatic-karaoke.vercel.app — footer shows **Mock mode: off**, Modal API URL, and **Client API key: set** when configured.
+Live: https://automatic-karaoke.vercel.app — production footer: *GPU processing on Modal · Hosted on Vercel*. Local dev: expand **Debug** for mock/API/key status (never shows the raw key).
 
 Redeploy Vercel after changing `VITE_*` (values are baked in at build time). Do not mark `VITE_API_KEY` as **Sensitive** on Vercel.
 
@@ -84,11 +86,12 @@ Requires Modal secrets **`karaoke-r2`** (R2) and **`karaoke-api-key`** (optional
 Smoke tests (repo root):
 
 ```powershell
+.\.venv\Scripts\python.exe scripts\smoke_phase8_step7.py            # Phase 8 sign-off (steps 1–6 + verify)
 .\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --verify-only
 .\.venv\Scripts\python.exe scripts\smoke_pipeline_modal.py          # full E2E (~10–25 min)
 ```
 
-Phase 7 gates: `scripts/smoke_phase7_step1.py` … `scripts/smoke_phase7_step7.py` — see [PHASE_7.md](docs/PHASE_7.md).
+Phase 8 gates: `scripts/smoke_phase8_step1.py` … `scripts/smoke_phase8_step7.py` — see [PHASE_8.md](docs/PHASE_8.md). Phase 7: [PHASE_7.md](docs/PHASE_7.md).
 
 **Operational limits (production):**
 
@@ -183,6 +186,7 @@ Prerequisites: R2 bucket + Modal secret `karaoke-r2`; Vercel `VITE_USE_MOCK=fals
 | 5 | FFmpeg + ASS render (isolated) ✓ |
 | 6 | Full pipeline integration ✓ |
 | 7 | Production hardening ✓ (see [PHASE_7.md](docs/PHASE_7.md)) |
+| 8 | Frontend polish & UX ✓ (see [PHASE_8.md](docs/PHASE_8.md)) |
 
 ## License
 

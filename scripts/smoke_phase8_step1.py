@@ -40,7 +40,7 @@ def main() -> int:
         raise SystemExit('index.css missing @import "tailwindcss"')
 
     app_tsx = (FRONTEND / "src" / "App.tsx").read_text(encoding="utf-8")
-    for needle in ("font-display", "max-w-lg", "rounded-2xl"):
+    for needle in ("font-display", "max-w-lg", "shadow-2xl"):
         if needle not in app_tsx:
             raise SystemExit(f"App.tsx layout shell missing: {needle}")
 

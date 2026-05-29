@@ -47,10 +47,12 @@ def _run_script(name: str, *extra: str) -> None:
 def verify_phase7_bundle_extras(js: str) -> None:
     """Phase 7-only checks on the production JS bundle (after Phase 6 verify)."""
     print("\n[2/3] Phase 7 production bundle extras …")
-    if "Client API key" not in js:
-        print("  note:     footer missing 'Client API key' — push latest frontend")
+    if "hasClientApiKey" in js or "configured" in js:
+        print("  footer:   API key status UI present (Phase 8 debug footer)")
+    elif "Client API key" in js:
+        print("  footer:   legacy API key status UI present")
     else:
-        print("  footer:   API key status UI present")
+        print("  note:     footer missing API key status — push latest frontend")
 
     key = os.environ.get("KARAOKE_API_KEY", "test-karaoke-phase7-key")
     if key and key in js:

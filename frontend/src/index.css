@@ -8,7 +8,7 @@
   --color-background: #0c0d12;
   --color-foreground: #9ca3af;
   --color-heading: #f3f4f6;
-  --color-muted: #6b7280;
+  --color-subtle: #6b7280;
   --color-border: #2e303a;
   --color-card: #16171d;
   --color-card-muted: #1f2028;
@@ -19,6 +19,18 @@
   --color-destructive: #f87171;
   --color-destructive-muted: rgb(248 113 113 / 12%);
 
+  /* shadcn/ui semantic tokens */
+  --color-primary: var(--color-accent);
+  --color-primary-foreground: #0c0d12;
+  --color-secondary: #1f2028;
+  --color-secondary-foreground: var(--color-heading);
+  --color-muted: #1f2028;
+  --color-muted-foreground: #9ca3af;
+  --color-card-foreground: var(--color-heading);
+  --color-ring: var(--color-accent);
+  --color-input: var(--color-border);
+
+  --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
@@ -54,6 +66,15 @@
 @media (min-width: 640px) {
   :root {
     font-size: 17px;
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
   }
 }
 

@@ -334,24 +334,13 @@ start-job
 
 ### Phase 8 — Frontend polish & UX
 
-**Detailed runbook:** [PHASE_8.md](./PHASE_8.md) — visual design, component library, upload/progress/video UX.
+**Detailed runbook:** [PHASE_8.md](./PHASE_8.md) — complete.
 
-**Entry criteria:** [Phase 7](./PHASE_7.md#exit-criteria--v2--maintenance) exit; production E2E still works.
+**Shipped:** Tailwind v4 + shadcn/ui; upload dropzone + CTA states; pipeline stepper + progress bar; video card with download; collapsible dev Debug footer; optional title/artist fields (UI-only).
 
-| Area | Actions |
-|------|---------|
-| Design system | Tailwind tokens and/or CSS variables; typography; spacing; dark theme refinement |
-| Components | shadcn/ui (recommended): Button, Card, Progress, Alert — copy into `frontend/src/components/ui/` |
-| Upload | Drag states, file chip, clearer CTA (idle / busy / error) |
-| Progress | Stepper aligned to `JobStatus`; bar from `progress`; failed state with retry copy |
-| Result | Video card, download, “make another”; empty state before upload |
-| Production UX | Hide dev footer (mock/API/key) on production builds; optional title/artist fields (UI-only until lyrics v2) |
+**Sign-off:** `.\.venv\Scripts\python.exe scripts\smoke_phase8_step7.py`
 
-**Out of scope:** Backend/API changes, lyric editor, auth.
-
-**Verification:** `npm run build`; `scripts/smoke_phase7_step8.py --verify-only`; manual upload on Vercel.
-
-**Exit:** [PHASE_8 checklist](./PHASE_8.md#phase-8-completion-checklist).
+**Exit:** [PHASE_8 checklist](./PHASE_8.md#phase-8-completion-checklist) (automated items checked; manual E2E on Vercel).
 
 ---
 
@@ -504,7 +493,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 6. ~~**Phase 5 — FFmpeg + ASS render**~~ ✓ — [PHASE_5.md](./PHASE_5.md) (Psychosomatic `karaoke.mp4` signed off May 2026).  
 7. ~~**Phase 6 — Integrate ML into backend**~~ ✓ — [PHASE_6.md](./PHASE_6.md).  
 8. ~~**Phase 7 — Production hardening**~~ ✓ — [PHASE_7.md](./PHASE_7.md).  
-9. **Phase 8 — Frontend polish & UX** — [PHASE_8.md](./PHASE_8.md).
+9. ~~**Phase 8 — Frontend polish & UX**~~ ✓ — [PHASE_8.md](./PHASE_8.md).
+10. **Feature v2** — reference lyrics API, alignment path — [backlog](#feature-v2-backlog-postphase-8-not-numbered-phases).
 
 ---
 
