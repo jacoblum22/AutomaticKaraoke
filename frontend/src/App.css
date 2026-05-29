@@ -1,50 +1,14 @@
-.app {
-  max-width: 36rem;
-  margin: 0 auto;
-  padding: 2rem 1.25rem 3rem;
-  text-align: left;
-}
+/* Component styles — shell layout uses Tailwind in App.tsx (Phase 8) */
 
-.app__header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.app__header h1 {
-  margin: 0 0 0.5rem;
-}
-
-.app__subtitle {
-  color: var(--text);
-  font-size: 1rem;
-  margin: 0;
-}
-
-.app__panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
+/* Errors (shared) */
 .app__error {
-  color: #b91c1c;
-  background: rgba(185, 28, 28, 0.1);
-  border: 1px solid rgba(185, 28, 28, 0.3);
-  border-radius: 8px;
+  color: var(--color-destructive);
+  background: var(--color-destructive-muted);
+  border: 1px solid rgb(248 113 113 / 30%);
+  border-radius: var(--radius-lg);
   padding: 0.75rem 1rem;
   margin: 0;
   font-size: 0.95rem;
-}
-
-.app__footer {
-  margin-top: 2.5rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text);
-}
-
-.app__footer code {
-  font-size: 0.8rem;
 }
 
 /* Upload */

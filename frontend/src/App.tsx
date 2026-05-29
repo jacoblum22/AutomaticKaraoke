@@ -12,6 +12,7 @@ import { ProgressTracker } from "./components/ProgressTracker";
 import { UploadForm } from "./components/UploadForm";
 import { VideoPlayer } from "./components/VideoPlayer";
 import { useJobPolling } from "./hooks/useJobPolling";
+import { cn } from "./lib/utils";
 import type { JobStatusResponse } from "./types/job";
 import "./App.css";
 
@@ -111,64 +112,96 @@ function App() {
   };
 
   return (
-    <main className="app">
-      <header className="app__header">
-        <h1>Automatic Karaoke</h1>
-        <p className="app__subtitle">
+    <div className="relative flex min-h-svh flex-col font-sans text-foreground">
+      <div
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgb(192_132_252/18%),transparent)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_100%_100%,rgb(99_102_241/8%),transparent_40%)]"
+        aria-hidden
+      />
+
+      <header className="relative px-4 pb-2 pt-8 text-center sm:px-6 sm:pt-12 lg:px-8">
+        <p className="mb-2 text-xs font-medium uppercase tracking-widest text-accent">
+          Automatic Karaoke
+        </p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-heading sm:text-4xl lg:text-5xl">
+          Turn any song into karaoke
+        </h1>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted sm:text-base">
           {isMockMode()
-            ? "Upload a song — mock pipeline (Phase 1)"
-            : "Upload a song — Demucs, Whisper, and render on Modal (GPU)"}
+            ? "Local mock pipeline — upload a track to preview the UI flow."
+            : "Upload audio — we separate vocals, transcribe lyrics, and render a sing-along video on Modal GPU."}
         </p>
       </header>
 
-      <section className="app__panel">
-        <UploadForm key={formKey} disabled={processing} onSubmit={handleFinalize} />
-
-        {startError && (
-          <p className="app__error" role="alert">
-            {startError}
+      <main className="relative mx-auto w-full max-w-lg flex-1 px-4 pb-10 sm:px-6 lg:max-w-xl lg:px-8">
+        {configWarning && (
+          <p
+            className="mb-4 rounded-xl border border-destructive/30 bg-destructive-muted px-4 py-3 text-sm text-destructive"
+            role="alert"
+          >
+            {configWarning}
           </p>
         )}
 
-        <ProgressTracker
-          status={jobStatus?.status ?? null}
-          progress={jobStatus?.progress}
-          message={jobStatus?.message}
-          error={jobStatus?.error}
-          indeterminate={busy && (jobStatus?.progress ?? 0) === 0}
-        />
+        <section
+          className={cn(
+            "flex flex-col gap-6 rounded-2xl border border-border bg-card/90 p-5 shadow-2xl shadow-black/20 backdrop-blur-sm",
+            "sm:p-7 lg:p-8"
+          )}
+          aria-label="Upload and processing"
+        >
+          <UploadForm key={formKey} disabled={processing} onSubmit={handleFinalize} />
 
-        <VideoPlayer src={videoUrl} />
-
-        {(videoUrl || jobStatus?.status === "failed") && (
-          <button type="button" className="btn btn--secondary" onClick={handleReset}>
-            Process another song
-          </button>
-        )}
-      </section>
-
-      {configWarning && (
-        <p className="app__error app__config-warning" role="alert">
-          {configWarning}
-        </p>
-      )}
-
-      <footer className="app__footer">
-        <p>
-          Mock mode: <code>{isMockMode() ? "on" : "off"}</code>
-        </p>
-        {!isMockMode() && (
-          <>
-            <p>
-              API: <code>{API_BASE}</code>
+          {startError && (
+            <p className="app__error" role="alert">
+              {startError}
             </p>
+          )}
+
+          <ProgressTracker
+            status={jobStatus?.status ?? null}
+            progress={jobStatus?.progress}
+            message={jobStatus?.message}
+            error={jobStatus?.error}
+            indeterminate={busy && (jobStatus?.progress ?? 0) === 0}
+          />
+
+          <VideoPlayer src={videoUrl} />
+
+          {(videoUrl || jobStatus?.status === "failed") && (
+            <button type="button" className="btn btn--secondary" onClick={handleReset}>
+              Process another song
+            </button>
+          )}
+        </section>
+      </main>
+
+      <footer className="relative border-t border-border/60 px-4 py-6 text-center text-xs text-muted sm:px-6">
+        {import.meta.env.DEV ? (
+          <div className="mx-auto flex max-w-lg flex-col gap-1">
             <p>
-              Client API key: <code>{hasClientApiKey() ? "set" : "missing"}</code>
+              Mock mode: <code>{isMockMode() ? "on" : "off"}</code>
             </p>
-          </>
+            {!isMockMode() && (
+              <>
+                <p>
+                  API: <code>{API_BASE}</code>
+                </p>
+                <p>
+                  Client API key:{" "}
+                  <code>{hasClientApiKey() ? "set" : "missing"}</code>
+                </p>
+              </>
+            )}
+          </div>
+        ) : (
+          <p>GPU processing on Modal · Hosted on Vercel</p>
         )}
       </footer>
-    </main>
+    </div>
   );
 }
 

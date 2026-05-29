@@ -98,6 +98,10 @@ python scripts/smoke_phase3_step7.py --modal-only
 .\.venv\Scripts\python.exe scripts\smoke_phase7_step7.py --deploy
 $env:KARAOKE_API_KEY="your-key"; .\.venv\Scripts\python.exe scripts\smoke_phase7_step7.py
 # Modal smokes capture CLI output (no mount tree). Full log: $env:SMOKE_MODAL_VERBOSE="1"
+# Phase 8 Step 1 — Tailwind + layout shell
+..\.venv\Scripts\python.exe scripts\smoke_phase8_step1.py
+cd frontend && npm run dev
+
 # Phase 7 Step 8 — sign-off (verify-only ~30s; --full adds pipeline + isolation)
 .\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --verify-only
 .\.venv\Scripts\python.exe scripts\smoke_phase7_step8.py --api

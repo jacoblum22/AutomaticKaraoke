@@ -76,7 +76,7 @@ flowchart LR
 
 ## 3. Repository layout (target)
 
-**Phase 0** creates the skeleton below (stubs + Vite scaffold). See [PHASE_0.md](./PHASE_0.md) for the exact tree, file minimums, and what is deferred. **Phases 1–7** fill in behavior without restructuring folders.
+**Phase 0** creates the skeleton below (stubs + Vite scaffold). See [PHASE_0.md](./PHASE_0.md) for the exact tree, file minimums, and what is deferred. **Phases 1–8** fill in behavior without restructuring folders.
 
 ```
 AutomaticKaraoke/
@@ -91,7 +91,8 @@ AutomaticKaraoke/
 │   ├── PHASE_4.md                      # Phase 4 runbook (Whisper + WhisperX)
 │   ├── PHASE_5.md                      # Phase 5 runbook (FFmpeg + ASS)
 │   ├── PHASE_6.md                      # Phase 6 runbook (pipeline integration)
-│   └── PHASE_7.md                      # Phase 7 runbook (production hardening)
+│   ├── PHASE_7.md                      # Phase 7 runbook (production hardening)
+│   └── PHASE_8.md                      # Phase 8 runbook (frontend polish)
 ├── frontend/                           # Phase 0 scaffold → Phase 1 — Vercel
 │   ├── .env.example                    # VITE_API_URL
 │   ├── package.json
@@ -331,6 +332,42 @@ start-job
 
 ---
 
+### Phase 8 — Frontend polish & UX
+
+**Detailed runbook:** [PHASE_8.md](./PHASE_8.md) — visual design, component library, upload/progress/video UX.
+
+**Entry criteria:** [Phase 7](./PHASE_7.md#exit-criteria--v2--maintenance) exit; production E2E still works.
+
+| Area | Actions |
+|------|---------|
+| Design system | Tailwind tokens and/or CSS variables; typography; spacing; dark theme refinement |
+| Components | shadcn/ui (recommended): Button, Card, Progress, Alert — copy into `frontend/src/components/ui/` |
+| Upload | Drag states, file chip, clearer CTA (idle / busy / error) |
+| Progress | Stepper aligned to `JobStatus`; bar from `progress`; failed state with retry copy |
+| Result | Video card, download, “make another”; empty state before upload |
+| Production UX | Hide dev footer (mock/API/key) on production builds; optional title/artist fields (UI-only until lyrics v2) |
+
+**Out of scope:** Backend/API changes, lyric editor, auth.
+
+**Verification:** `npm run build`; `scripts/smoke_phase7_step8.py --verify-only`; manual upload on Vercel.
+
+**Exit:** [PHASE_8 checklist](./PHASE_8.md#phase-8-completion-checklist).
+
+---
+
+## Feature v2 backlog (post–Phase 8, not numbered phases)
+
+These are product enhancements after the **base pipeline + polish** ship:
+
+| Item | Notes |
+|------|--------|
+| Reference lyrics API | LRCLIB / Musixmatch → WhisperX align on vocal stem (see architecture discussion) |
+| Lyric editor / LRC upload | Cheaper than full word editor |
+| Auth, payments, queues | Multi-tenant product |
+| Custom R2 domain | CDN branding |
+
+---
+
 ## 5. Modal design notes
 
 ### Images (split for faster cold starts)
@@ -466,7 +503,8 @@ Keep `render.py` pure: input JSON + audio path → output MP4 path. Unit-test AS
 5. ~~**Phase 4 — Transcription + alignment**~~ ✓ — [PHASE_4.md](./PHASE_4.md).  
 6. ~~**Phase 5 — FFmpeg + ASS render**~~ ✓ — [PHASE_5.md](./PHASE_5.md) (Psychosomatic `karaoke.mp4` signed off May 2026).  
 7. ~~**Phase 6 — Integrate ML into backend**~~ ✓ — [PHASE_6.md](./PHASE_6.md).  
-8. ~~**Phase 7 — Production hardening**~~ ✓ — [PHASE_7.md](./PHASE_7.md).
+8. ~~**Phase 7 — Production hardening**~~ ✓ — [PHASE_7.md](./PHASE_7.md).  
+9. **Phase 8 — Frontend polish & UX** — [PHASE_8.md](./PHASE_8.md).
 
 ---
 
@@ -515,8 +553,11 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 | Category | Recommendation | Priority |
 |----------|----------------|----------|
 | **Must finish first** | Modal CLI (`modal token new`), Vercel project (root `frontend/`), GitHub remote | Phase 0 Steps 4–7 |
-| **VS Code extensions** | ESLint, Python, Pylance; Ruff optional; REST Client/Thunder Client in Phase 2+ | Step 8 — optional |
-| **Vercel MCP / plugin** | Deploy/env troubleshooting; moderate value for **Vite** (much plugin content is Next.js-specific) | After Step 7 — optional |
+| **VS Code extensions** | ESLint, Python, Pylance; Tailwind IntelliSense in Phase 8+ | Step 8 — optional |
+| **UI components** | [shadcn/ui](https://ui.shadcn.com/) + Tailwind in `frontend/` (npm; not an MCP) | Phase 8 |
+| **Cursor Canvas** | Interactive layout/mockup previews beside chat | Phase 8 — optional |
+| **Figma MCP** | Design handoff if you use Figma — enable in Cursor MCP settings | Phase 8 — optional |
+| **Vercel MCP / plugin** | Deploy/env troubleshooting; not a component library | After Phase 7 — optional |
 | **Cursor rules** | `.cursor/rules` or `AGENTS.md` — stack, async API, vocal-stem-only transcription | Step 8 — optional |
 | **Modal agent context** | `modal.com/llms-full.txt`, [developing with LLMs](https://modal.com/docs/guide/developing-with-llms) when editing `backend/` | Any phase |
 | **System CLIs** | `vercel` CLI (Step 7+), `gh` (Step 6+), FFmpeg on PATH (Phase 5), CUDA optional (local ML only) | Per phase |
@@ -526,4 +567,4 @@ Optional setup documented in detail in [PHASE_0.md § Cursor and editor tooling]
 
 ---
 
-*Document version: 2.4 — adds [PHASE_7.md](./PHASE_7.md) production hardening runbook.*
+*Document version: 2.5 — adds [PHASE_8.md](./PHASE_8.md) frontend polish runbook; v2 lyrics backlog.*
